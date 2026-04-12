@@ -1019,7 +1019,19 @@ async function cleanGroupedStudentDuplicates(encodedKey){
   if(!group)return;
   const ordered=group.items.slice().sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
   const seen=new Set(); const ids=[];
-  ordered.forEach(item=>{const key=makeDuplicateKey(item); if(seen.has(key))ids.push(item.id); else seen.add(key)});
+  ordered.forEach(item=>{
+    const key=makeDuplicateKey({
+      student: normalizeStudentName(group.student),
+      wa: group.wa,
+      level: group.level,
+      matiere: item.matiere,
+      enseignant: item.enseignant,
+      montant: item.montant,
+      type: item.type,
+      date: item.date
+    });
+    if(seen.has(key))ids.push(item.id); else seen.add(key)
+  });
   if(!ids.length){toast('Aucun doublon pour cet étudiant');return}
   if(await delPays(ids)){
     await renderAdmin();
