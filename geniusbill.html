@@ -379,6 +379,7 @@ tr:hover td{background:var(--primary-light)}
       <div class="card">
         <h2>🔐 Admin</h2>
         <p class="sub">Le dashboard utilise Supabase Auth. Crée un seul compte admin dans Supabase.</p>
+        <button class="btn-outline" style="margin-right:.6rem" onclick="cleanDuplicates()">Nettoyer les doublons</button>
         <button class="btn" style="max-width:220px" onclick="logoutAdmin()">Se déconnecter</button>
       </div>
       <div class="card dz">
@@ -498,6 +499,14 @@ async function delPay(id){
   if(!requireSupabase())return false;
   const {error}=await sbClient.from('payments').delete().eq('id',id);
   if(error){console.error(error);toast('❌ Suppression impossible');return false}
+  return true;
+}
+
+async function delPays(ids){
+  if(!requireSupabase())return false;
+  if(!ids.length)return true;
+  const {error}=await sbClient.from('payments').delete().in('id',ids);
+  if(error){console.error(error);toast('❌ Nettoyage impossible');return false}
   return true;
 }
 
@@ -789,6 +798,33 @@ async function logoutAdmin(){
   await sbClient.auth.signOut();
   show('s-home');
   toast('Session admin fermée');
+}
+
+async function cleanDuplicates(){
+  if(!confirm('Nettoyer les doublons existants ? La plus ancienne entrée sera conservée.'))return;
+  const all=await getPays();
+  const groups=new Map();
+  all
+    .slice()
+    .sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))
+    .forEach(p=>{
+      const key=p.duplicate_key||makeDuplicateKey(p);
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(p);
+    });
+  const idsToDelete=[];
+  groups.forEach(items=>{
+    if(items.length>1)items.slice(1).forEach(item=>idsToDelete.push(item.id));
+  });
+  if(!idsToDelete.length){
+    toast('Aucun doublon à supprimer');
+    return;
+  }
+  if(await delPays(idsToDelete)){
+    await renderAdmin();
+    await renderTable();
+    toast(`${idsToDelete.length} doublon(s) supprimé(s)`);
+  }
 }
 
 async function clearAll(){
