@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GeniusBill</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#f4f6fb; --white:#fff; --surface:#f0f2f8; --border:#e2e6f0;
+  --primary:#2563eb; --primary-light:#eff4ff; --primary-hover:#1d4ed8;
+  --green:#16a34a; --green-light:#f0fdf4;
+  --amber:#d97706; --amber-light:#fffbeb;
+  --red:#dc2626; --red-light:#fff1f2;
+  --text:#1e293b; --text2:#475569; --text3:#94a3b8;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.09);
+  --r:12px; --rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.5}
+
+/* NAV */
+nav{background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.5rem;position:sticky;top:0;z-index:200;box-shadow:var(--shadow)}
+.logo{font-weight:800;font-size:1.22rem;color:var(--primary);letter-spacing:-.4px}
+.logo span{color:var(--text)}
+.btn-nav{background:none;border:1px solid var(--border);color:var(--text2);padding:.38rem .9rem;border-radius:999px;cursor:pointer;font-size:.82rem;font-family:inherit;font-weight:500;transition:all .15s}
+.btn-nav:hover{border-color:var(--primary);color:var(--primary)}
+
+/* SCREENS */
+.screen{display:none}.screen.active{display:block}
+.wrap{max-width:560px;margin:0 auto;padding:2rem 1.2rem}
+.wrap-lg{max-width:1100px;margin:0 auto;padding:2rem 1.2rem}
+
+/* TYPE */
+h1{font-weight:800;font-size:1.65rem;line-height:1.2;margin-bottom:.3rem}
+h2{font-weight:700;font-size:1.1rem;margin-bottom:.9rem}
+.sub{color:var(--text2);font-size:.9rem;margin-bottom:1.7rem}
+
+/* CARD */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:1.3rem;box-shadow:var(--shadow);margin-bottom:1rem}
+
+/* FORM */
+.field{margin-bottom:.95rem}
+.field label{display:block;font-size:.82rem;font-weight:600;color:var(--text2);margin-bottom:.32rem}
+.field label .opt{font-weight:400;color:var(--text3)}
+input,select{width:100%;background:var(--white);border:1.5px solid var(--border);color:var(--text);padding:.62rem .9rem;border-radius:var(--rs);font-size:.93rem;font-family:inherit;transition:border-color .15s,box-shadow .15s;outline:none}
+input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.11)}
+input::placeholder{color:var(--text3)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+@media(max-width:460px){.row2{grid-template-columns:1fr}}
+
+/* TOGGLE */
+.tog-wrap{display:flex;gap:.5rem}
+.tog-wrap input[type=radio]{display:none}
+.tog-wrap label{flex:1;text-align:center;padding:.55rem .4rem;border:1.5px solid var(--border);border-radius:var(--rs);cursor:pointer;font-size:.87rem;font-weight:500;color:var(--text2);transition:all .15s;margin:0;background:var(--white)}
+.tog-wrap input[type=radio]:checked+label{border-color:var(--primary);color:var(--primary);background:var(--primary-light)}
+
+/* LEVEL */
+.lvl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.5rem}
+.lvl-card{background:var(--white);border:2px solid var(--border);border-radius:var(--r);padding:1.1rem .7rem;cursor:pointer;text-align:center;transition:all .18s;box-shadow:var(--shadow)}
+.lvl-card:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.lvl-card.sel{border-color:var(--primary);background:var(--primary-light)}
+.lvl-card .ic{font-size:1.7rem;margin-bottom:.35rem}
+.lvl-card .nm{font-weight:700;font-size:.93rem}
+.lvl-card .hn{font-size:.73rem;color:var(--text3);margin-top:.1rem}
+
+/* PROGRESS */
+.prog-wrap{margin-bottom:1.7rem}
+.prog-head{display:flex;justify-content:space-between;font-size:.78rem;color:var(--text2);margin-bottom:.38rem;font-weight:500}
+.prog-track{background:var(--surface);border-radius:999px;height:7px}
+.prog-bar{background:var(--primary);height:7px;border-radius:999px;transition:width .4s ease}
+
+/* STEP */
+.step-head{display:flex;align-items:center;gap:.65rem;margin-bottom:1.3rem}
+.step-num{width:1.9rem;height:1.9rem;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.88rem;flex-shrink:0}
+.step-head h2{margin:0;font-size:1.05rem}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;background:var(--primary);color:#fff;border:none;padding:.7rem 1.3rem;border-radius:var(--rs);font-size:.93rem;font-family:inherit;font-weight:600;cursor:pointer;transition:background .15s;width:100%}
+.btn:hover{background:var(--primary-hover)}
+.btn-sm{padding:.42rem .85rem;font-size:.82rem;width:auto}
+.btn-outline{background:none;border:1.5px solid var(--border);color:var(--text2);padding:.62rem 1.2rem;border-radius:var(--rs);cursor:pointer;font-family:inherit;font-size:.88rem;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:.3rem}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn-ghost{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.82rem;font-family:inherit;padding:.28rem .5rem;border-radius:6px;transition:all .15s}
+.btn-ghost:hover{color:var(--red);background:var(--red-light)}
+.btn-pdf{background:var(--green);color:#fff;border:none;padding:.36rem .75rem;border-radius:6px;cursor:pointer;font-size:.76rem;font-family:inherit;font-weight:600;transition:background .15s;white-space:nowrap}
+.btn-pdf:hover{background:#15803d}
+
+/* BADGE */
+.badge{display:inline-block;padding:.18rem .6rem;border-radius:999px;font-size:.73rem;font-weight:600}
+.b-avance{background:var(--amber-light);color:var(--amber)}
+.b-total{background:var(--green-light);color:var(--green)}
+.b-l1{background:#fef3c7;color:#92400e}
+.b-l2{background:#dbeafe;color:#1e40af}
+.b-l3{background:#ede9fe;color:#5b21b6}
+
+/* RECEIPT */
+.rcpt-wrap{background:var(--surface);border-radius:var(--rs);padding:.95rem;margin-top:.7rem}
+.rcpt-row{display:flex;justify-content:space-between;align-items:center;padding:.42rem 0;border-bottom:1px solid var(--border);font-size:.87rem}
+.rcpt-row:last-child{border:none;font-weight:700;font-size:.93rem;color:var(--green)}
+.rcpt-lbl{color:var(--text2)}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:.9rem;margin-bottom:1.3rem}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:1rem;box-shadow:var(--shadow)}
+.stat-val{font-weight:800;font-size:1.6rem;line-height:1}
+.stat-lbl{font-size:.76rem;color:var(--text3);margin-top:.22rem;font-weight:500}
+.sp .stat-val{color:var(--primary)}
+.sg .stat-val{color:var(--green)}
+.sa .stat-val{color:var(--amber)}
+
+/* TABS */
+.tabs{display:flex;gap:.2rem;flex-wrap:wrap;border-bottom:2px solid var(--border);margin-bottom:1.3rem}
+.tab{padding:.58rem 1rem;border:none;background:none;color:var(--text3);cursor:pointer;font-family:inherit;font-size:.87rem;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab:hover{color:var(--primary)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+/* TABLE */
+.tbl-box{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+thead tr{background:var(--surface)}
+th{padding:.6rem 1rem;text-align:left;font-size:.72rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+td{padding:.6rem 1rem;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--primary-light)}
+.td-name{font-weight:600}
+.td-wa{color:var(--text3);font-size:.79rem}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+@media(max-width:660px){.charts-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem;box-shadow:var(--shadow)}
+.chart-card h3{font-size:.88rem;font-weight:700;margin-bottom:.9rem;color:var(--text2)}
+
+/* CFG */
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:660px){.cfg-grid{grid-template-columns:1fr}}
+.item-row{display:flex;align-items:center;justify-content:space-between;padding:.48rem 0;border-bottom:1px solid var(--border);font-size:.87rem}
+.item-row:last-child{border:none}
+.add-row{display:flex;gap:.5rem;margin-top:.7rem}
+.add-row input{flex:1}
+
+/* FILTER */
+.filter-bar{display:flex;gap:.7rem;margin-bottom:1rem;flex-wrap:wrap}
+.filter-bar input{flex:2;min-width:140px}
+.filter-bar select{flex:1;min-width:110px}
+
+/* PASS */
+.pass-box{max-width:330px;margin:5rem auto;text-align:center}
+.pass-box input{text-align:center;letter-spacing:.12em;margin:.75rem 0}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.4rem;right:1.4rem;background:var(--text);color:#fff;padding:.65rem 1.15rem;border-radius:var(--rs);font-size:.87rem;z-index:9999;pointer-events:none;transform:translateY(70px);opacity:0;transition:all .24s;box-shadow:var(--shadow-md)}
+.toast.show{transform:translateY(0);opacity:1}
+
+.empty{text-align:center;padding:3rem;color:var(--text3);font-size:.88rem}
+.dz{border-color:var(--red)!important}
+.dz h2{color:var(--red)}
+@media print{nav,.no-print{display:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Genius<span>Bill</span></div>
+  <button class="btn-nav" onclick="goAdmin()">⚙ Admin</button>
+</nav>
+
+<!-- ══ S1 HOME ══ -->
+<div class="screen active" id="s-home">
+  <div class="wrap">
+    <br>
+    <h1>Enregistre tes frais de cours 📚</h1>
+    <p class="sub">Renseigne tes informations, puis saisis tes paiements matière par matière.</p>
+    <div class="card">
+      <div class="field">
+        <label>Nom complet</label>
+        <input id="inName" type="text" placeholder="Ex : Jean-Baptiste Kamga"/>
+      </div>
+      <div class="field">
+        <label>Numéro WhatsApp <span class="opt">(celui présent dans le groupe)</span></label>
+        <input id="inWA" type="tel" placeholder="Ex : +237 6XX XXX XXX"/>
+      </div>
+    </div>
+    <h2>Choisis ton niveau</h2>
+    <div class="lvl-grid">
+      <div class="lvl-card" onclick="pickLvl(1,this)">
+        <div class="ic">🌱</div><div class="nm">Niveau 1</div><div class="hn">L1</div>
+      </div>
+      <div class="lvl-card" onclick="pickLvl(2,this)">
+        <div class="ic">🚀</div><div class="nm">Niveau 2</div><div class="hn">L2</div>
+      </div>
+      <div class="lvl-card" onclick="pickLvl(3,this)">
+        <div class="ic">🎓</div><div class="nm">Niveau 3</div><div class="hn">L3</div>
+      </div>
+    </div>
+    <button class="btn" onclick="goCount()">Continuer →</button>
+  </div>
+</div>
+
+<!-- ══ S2 COUNT ══ -->
+<div class="screen" id="s-count">
+  <div class="wrap">
+    <br>
+    <h1>Combien de matières as-tu réglé ?</h1>
+    <p class="sub">Tu vas les saisir une par une ensuite.</p>
+    <div class="card">
+      <div class="field">
+        <label>Nombre de matières</label>
+        <input id="inNb" type="number" min="1" max="20" placeholder="Ex : 3"/>
+      </div>
+      <button class="btn" onclick="goMats()">Démarrer la saisie →</button>
+    </div>
+    <br><button class="btn-outline" onclick="show('s-home')">← Retour</button>
+  </div>
+</div>
+
+<!-- ══ S3 MATIÈRE ══ -->
+<div class="screen" id="s-mat">
+  <div class="wrap">
+    <br>
+    <div class="prog-wrap">
+      <div class="prog-head"><span id="progTxt">Matière 1 / 4</span><span id="progPct">0 %</span></div>
+      <div class="prog-track"><div class="prog-bar" id="progBar" style="width:0%"></div></div>
+    </div>
+    <div class="step-head">
+      <div class="step-num" id="stepN">1</div>
+      <h2 id="stepT">Matière 1</h2>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>Matière</label>
+        <select id="selMat"><option value="">— Sélectionner —</option></select>
+      </div>
+      <div class="field">
+        <label>Enseignant</label>
+        <select id="selEns"><option value="">— Sélectionner —</option></select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Montant (FCFA)</label>
+          <input id="inAmt" type="number" min="0" placeholder="Ex : 5000"/>
+        </div>
+        <div class="field">
+          <label>Date <span class="opt">(optionnel)</span></label>
+          <input id="inDate" type="date"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Type de paiement</label>
+        <div class="tog-wrap">
+          <input type="radio" name="pt" id="ptA" value="avance" checked/><label for="ptA">💰 Avance</label>
+          <input type="radio" name="pt" id="ptT" value="total"/><label for="ptT">✅ Paiement total</label>
+        </div>
+      </div>
+      <button class="btn" onclick="nextMat()">Suivant →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S4 SUCCESS ══ -->
+<div class="screen" id="s-ok">
+  <div class="wrap">
+    <br>
+    <div style="text-align:center;font-size:2.8rem;margin-bottom:.5rem">✅</div>
+    <h1 style="text-align:center">Enregistrement réussi !</h1>
+    <p class="sub" style="text-align:center">Récapitulatif de tes paiements.</p>
+    <div class="card" id="recapCard"></div>
+    <br>
+    <button class="btn" onclick="newSession()">Nouveau paiement</button>
+  </div>
+</div>
+
+<!-- ══ ADMIN LOGIN ══ -->
+<div class="screen" id="s-login">
+  <div class="wrap">
+    <div class="pass-box">
+      <div style="font-size:2.8rem;margin-bottom:.9rem">🔒</div>
+      <h2>Accès Administrateur</h2>
+      <p class="sub">Réservé à l'équipe de gestion.</p>
+      <input id="inPass" type="password" placeholder="Mot de passe"
+             onkeydown="if(event.key==='Enter')checkPass()"/>
+      <button class="btn" onclick="checkPass()">Entrer</button>
+      <br><br>
+      <button class="btn-outline" onclick="show('s-home')">← Retour</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN DASHBOARD ══ -->
+<div class="screen" id="s-admin">
+  <div class="wrap-lg">
+    <br>
+    <h1>Dashboard <span style="color:var(--primary)">GeniusBill</span></h1>
+    <p class="sub">Gestion complète des frais de cours.</p>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('overview',this)">📊 Vue globale</button>
+      <button class="tab" onclick="switchTab('students',this)">👥 Paiements</button>
+      <button class="tab" onclick="switchTab('config',this)">⚙ Configuration</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div id="tab-overview">
+      <div class="stats-row" id="statsRow"></div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>💰 Total perçu par matière</h3>
+          <canvas id="chartMat" height="230"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>👨‍🏫 Répartition par enseignant</h3>
+          <canvas id="chartEns" height="230"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- STUDENTS -->
+    <div id="tab-students" style="display:none">
+      <div class="filter-bar">
+        <input id="fSearch" placeholder="🔍 Rechercher étudiant ou WhatsApp…" oninput="renderTable()"/>
+        <select id="fNiv" onchange="renderTable()">
+          <option value="">Tous les niveaux</option>
+          <option>Niveau 1</option><option>Niveau 2</option><option>Niveau 3</option>
+        </select>
+      </div>
+      <div class="tbl-box">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Étudiant</th><th>WhatsApp</th><th>Niveau</th>
+              <th>Matière</th><th>Enseignant</th><th>Montant</th>
+              <th>Type</th><th>Date</th><th>Reçu</th><th></th>
+            </tr></thead>
+            <tbody id="tBody"></tbody>
+          </table>
+        </div>
+        <div id="tEmpty" class="empty" style="display:none">Aucun paiement enregistré pour l'instant.</div>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="tab-config" style="display:none">
+      <div class="cfg-grid">
+        <div class="card">
+          <h2>📚 Matières — Niveau</h2>
+          <select id="cfgNiv" onchange="renderCfgMat()" style="margin-bottom:.8rem">
+            <option value="1">Niveau 1</option>
+            <option value="2">Niveau 2</option>
+            <option value="3">Niveau 3</option>
+          </select>
+          <div id="cfgMatList"></div>
+          <div class="add-row">
+            <input id="cfgMatNew" placeholder="Nouvelle matière…"/>
+            <button class="btn btn-sm" onclick="addMat()">+ Ajouter</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>👨‍🏫 Enseignants — Niveau</h2>
+          <select id="cfgEnsNiv" onchange="renderCfgEns()" style="margin-bottom:.8rem">
+            <option value="1">Niveau 1</option>
+            <option value="2">Niveau 2</option>
+            <option value="3">Niveau 3</option>
+          </select>
+          <div id="cfgEnsList"></div>
+          <div class="add-row">
+            <input id="cfgEnsNew" placeholder="Nouvel enseignant…"/>
+            <button class="btn btn-sm" onclick="addEns()">+ Ajouter</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>🔑 Mot de passe admin</h2>
+        <div class="row2">
+          <div class="field"><label>Nouveau</label><input id="np1" type="password" placeholder="••••••"/></div>
+          <div class="field"><label>Confirmer</label><input id="np2" type="password" placeholder="••••••"/></div>
+        </div>
+        <button class="btn" style="max-width:200px" onclick="changePass()">Enregistrer</button>
+      </div>
+      <div class="card dz">
+        <h2>⚠ Zone danger</h2>
+        <p class="sub">Supprime définitivement tous les paiements enregistrés.</p>
+        <button class="btn-outline" style="color:var(--red);border-color:var(--red)" onclick="clearAll()">Effacer tous les paiements</button>
+      </div>
+    </div>
+
+    <br>
+    <button class="btn-outline no-print" onclick="show('s-home')">← Retour accueil</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DEFAULT CONFIG ──
+const DEFAULTS = {
+  password: "admin123",
+  matieres: {
+    "1": ["Haskell","C++","Système d'exploitation","Réseau"],
+    "2": ["Génie logiciel","Système d'information","Programmation web","Théorie des marchés","Électronique numérique 2"],
+    "3": ["Java EE","Programmation mobile","Système d'exploitation & Réseau","Base de données","Optimisation"]
+  },
+  enseignants: {
+    "1": ["Mr Shinobi","Mr Ismaël","Mr Joël"],
+    "2": ["Mr David","Mr Russel","Mr Shinobi","Mr Wafo Arol","Mr Hamed","Mr Joël","Mlle Enga","Mr Karl","Mr Yann"],
+    "3": ["Mr David","Mr Russel","Mr Shinobi","Mr Wafo Arol","Mr Hamed","Mr Joël","Mlle Enga","Mr Karl","Mr Yann"]
+  }
+};
+
+// ── STORAGE ──
+function getCfg(){try{return JSON.parse(localStorage.getItem('gb_cfg'))||JSON.parse(JSON.stringify(DEFAULTS))}catch(e){return JSON.parse(JSON.stringify(DEFAULTS))}}
+function saveCfg(c){localStorage.setItem('gb_cfg',JSON.stringify(c))}
+function getPays(){try{return JSON.parse(localStorage.getItem('gb_pays'))||[]}catch(e){return[]}}
+function addPay(p){const a=getPays();a.push(p);localStorage.setItem('gb_pays',JSON.stringify(a))}
+function delPay(id){localStorage.setItem('gb_pays',JSON.stringify(getPays().filter(p=>p.id!==id)))}
+
+// ── STATE ──
+let S={name:'',wa:'',level:null,nb:0,idx:0,session:[]};
+
+// ── NAV ──
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0)}
+function goAdmin(){show('s-login')}
+
+// ── HOME ──
+function pickLvl(n,el){document.querySelectorAll('.lvl-card').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');S.level=n}
+function goCount(){
+  S.name=document.getElementById('inName').value.trim();
+  S.wa=document.getElementById('inWA').value.trim();
+  if(!S.name){toast('⚠ Entre ton nom complet');return}
+  if(!S.wa){toast('⚠ Entre ton numéro WhatsApp');return}
+  if(!S.level){toast('⚠ Choisis ton niveau');return}
+  show('s-count')
+}
+
+// ── COUNT → MATS ──
+function goMats(){
+  const n=parseInt(document.getElementById('inNb').value);
+  if(!n||n<1){toast('⚠ Entre un nombre valide');return}
+  S.nb=n;S.idx=0;S.session=[];
+  loadMat();show('s-mat')
+}
+
+function loadMat(){
+  const cfg=getCfg();const i=S.idx,tot=S.nb;const pct=Math.round((i/tot)*100);
+  document.getElementById('progTxt').textContent=`Matière ${i+1} / ${tot}`;
+  document.getElementById('progPct').textContent=pct+' %';
+  document.getElementById('progBar').style.width=pct+'%';
+  document.getElementById('stepN').textContent=i+1;
+  document.getElementById('stepT').textContent=`Matière ${i+1}`;
+  const mats=cfg.matieres[String(S.level)]||[];
+  const enss=cfg.enseignants[String(S.level)]||[];
+  const sm=document.getElementById('selMat');
+  sm.innerHTML='<option value="">— Sélectionner —</option>';
+  mats.forEach(m=>sm.innerHTML+=`<option>${m}</option>`);
+  const se=document.getElementById('selEns');
+  se.innerHTML='<option value="">— Sélectionner —</option>';
+  enss.forEach(e=>se.innerHTML+=`<option>${e}</option>`);
+  document.getElementById('inAmt').value='';
+  document.getElementById('inDate').value='';
+  document.getElementById('ptA').checked=true
+}
+
+function nextMat(){
+  const mat=document.getElementById('selMat').value;
+  const ens=document.getElementById('selEns').value;
+  const amt=parseInt(document.getElementById('inAmt').value);
+  const dat=document.getElementById('inDate').value;
+  const typ=document.querySelector('input[name="pt"]:checked').value;
+  if(!mat){toast('⚠ Sélectionne une matière');return}
+  if(!ens){toast('⚠ Sélectionne un enseignant');return}
+  if(!amt||amt<0){toast('⚠ Entre un montant valide');return}
+  const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2),student:S.name,wa:S.wa,level:`Niveau ${S.level}`,matiere:mat,enseignant:ens,montant:amt,type:typ,date:dat||null,createdAt:new Date().toISOString()};
+  S.session.push(entry);S.idx++;
+  if(S.idx<S.nb){loadMat()}else{S.session.forEach(e=>addPay(e));showOk()}
+}
+
+function showOk(){
+  const total=S.session.reduce((s,e)=>s+e.montant,0);
+  const lvl=S.level;
+  let h=`<div style="margin-bottom:.8rem"><strong>${S.name}</strong><span class="badge b-l${lvl}" style="margin-left:.5rem">Niveau ${lvl}</span><div style="color:var(--text3);font-size:.8rem;margin-top:.15rem">📱 ${S.wa}</div></div><div class="rcpt-wrap">`;
+  S.session.forEach(e=>{h+=`<div class="rcpt-row"><span class="rcpt-lbl">${e.matiere} · ${e.enseignant}</span><span style="display:flex;align-items:center;gap:.4rem"><span class="badge ${e.type==='avance'?'b-avance':'b-total'}">${e.type}</span><strong>${e.montant.toLocaleString()} FCFA</strong></span></div>`});
+  h+=`<div class="rcpt-row"><span>TOTAL</span><span>${total.toLocaleString()} FCFA</span></div></div>`;
+  document.getElementById('recapCard').innerHTML=h;show('s-ok')
+}
+
+function newSession(){
+  S={name:'',wa:'',level:null,nb:0,idx:0,session:[]};
+  document.getElementById('inName').value='';
+  document.getElementById('inWA').value='';
+  document.querySelectorAll('.lvl-card').forEach(c=>c.classList.remove('sel'));
+  show('s-home')
+}
+
+// ── ADMIN ──
+function checkPass(){
+  if(document.getElementById('inPass').value===getCfg().password){
+    document.getElementById('inPass').value='';show('s-admin');renderAdmin()
+  }else{toast('❌ Mot de passe incorrect')}
+}
+
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  ['overview','students','config'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===name?'block':'none'});
+  if(name==='students')renderTable();
+  if(name==='config'){renderCfgMat();renderCfgEns()}
+  if(name==='overview'){renderStats();renderCharts()}
+}
+
+function renderAdmin(){renderStats();renderCharts()}
+
+function renderStats(){
+  const all=getPays();
+  const total=all.reduce((s,p)=>s+p.montant,0);
+  const students=[...new Set(all.map(p=>p.student))].length;
+  const avances=all.filter(p=>p.type==='avance').length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-card sp"><div class="stat-val">${total.toLocaleString()}</div><div class="stat-lbl">FCFA perçus au total</div></div>
+    <div class="stat-card"><div class="stat-val">${all.length}</div><div class="stat-lbl">Paiements enregistrés</div></div>
+    <div class="stat-card sg"><div class="stat-val">${students}</div><div class="stat-lbl">Étudiants distincts</div></div>
+    <div class="stat-card sa"><div class="stat-val">${avances}</div><div class="stat-lbl">Avances en cours</div></div>`
+}
+
+let cMat,cEns;
+function renderCharts(){
+  const all=getPays();
+  const byMat={},byEns={};
+  all.forEach(p=>{byMat[p.matiere]=(byMat[p.matiere]||0)+p.montant;byEns[p.enseignant]=(byEns[p.enseignant]||0)+p.montant});
+  const COLS=['#2563eb','#0ea5e9','#16a34a','#d97706','#7c3aed','#db2777','#ea580c','#0d9488','#4f46e5'];
+  if(cMat)cMat.destroy();
+  cMat=new Chart(document.getElementById('chartMat'),{type:'bar',data:{labels:Object.keys(byMat),datasets:[{data:Object.values(byMat),backgroundColor:'#2563eb',borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'#f0f2f8'}},y:{ticks:{color:'#94a3b8'},grid:{color:'#f0f2f8'}}}}});
+  if(cEns)cEns.destroy();
+  cEns=new Chart(document.getElementById('chartEns'),{type:'doughnut',data:{labels:Object.keys(byEns),datasets:[{data:Object.values(byEns),backgroundColor:COLS,borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{labels:{color:'#475569',font:{size:11}}}}}})
+}
+
+function renderTable(){
+  const q=(document.getElementById('fSearch')?.value||'').toLowerCase();
+  const niv=document.getElementById('fNiv')?.value||'';
+  let all=getPays();
+  if(q)all=all.filter(p=>p.student.toLowerCase().includes(q)||p.wa.includes(q));
+  if(niv)all=all.filter(p=>p.level===niv);
+  const body=document.getElementById('tBody');
+  const empty=document.getElementById('tEmpty');
+  if(!all.length){body.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  body.innerHTML=all.map(p=>{const lv=p.level.replace('Niveau ','');return`<tr><td><div class="td-name">${p.student}</div></td><td><div class="td-wa">${p.wa}</div></td><td><span class="badge b-l${lv}">${p.level}</span></td><td>${p.matiere}</td><td>${p.enseignant}</td><td><strong>${p.montant.toLocaleString()} FCFA</strong></td><td><span class="badge ${p.type==='avance'?'b-avance':'b-total'}">${p.type}</span></td><td style="color:var(--text3);font-size:.8rem">${p.date||'—'}</td><td><button class="btn-pdf" onclick="printRcpt('${p.id}')">🖨 Reçu PDF</button></td><td><button class="btn-ghost" onclick="delRow('${p.id}')">✕</button></td></tr>`}).join('')
+}
+
+function delRow(id){if(!confirm('Supprimer ce paiement ?'))return;delPay(id);renderTable();renderStats();renderCharts();toast('Paiement supprimé')}
+
+// ── PDF RECEIPT ──
+function printRcpt(id){
+  const p=getPays().find(x=>x.id===id);if(!p)return;
+  const win=window.open('','_blank','width=720,height=950');
+  const dateStr=p.date?new Date(p.date).toLocaleDateString('fr-FR'):'—';
+  const cStr=new Date(p.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><title>Reçu — ${p.student}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:#1e293b;padding:0}
+    .page{max-width:580px;margin:0 auto;padding:44px 40px}
+    .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;padding-bottom:20px;border-bottom:3px solid #2563eb}
+    .logo{font-size:1.3rem;font-weight:800;color:#2563eb}.logo span{color:#1e293b}
+    .rtitle{font-size:.75rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+    .meta{text-align:right;font-size:.8rem;color:#94a3b8}
+    .meta strong{color:#1e293b;display:block;margin-top:3px}
+    .igrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+    .ibox{background:#f4f6fb;border-radius:9px;padding:11px 13px}
+    .ibox .lbl{font-size:.7rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+    .ibox .val{font-weight:600;font-size:.9rem}
+    table{width:100%;border-collapse:collapse;margin:18px 0}
+    th{background:#f4f6fb;padding:9px 11px;text-align:left;font-size:.72rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em}
+    td{padding:9px 11px;border-bottom:1px solid #e2e6f0;font-size:.88rem}
+    .trow td{font-weight:800;font-size:.95rem;background:#eff4ff;color:#2563eb;border:none}
+    .bdg{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:600}
+    .ba{background:#fffbeb;color:#d97706}.bt{background:#f0fdf4;color:#16a34a}
+    .foot{margin-top:30px;padding-top:14px;border-top:1px solid #e2e6f0;text-align:center;color:#94a3b8;font-size:.76rem}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <div class="page">
+    <div class="hdr">
+      <div><div class="logo">Genius<span>Bill</span></div><div class="rtitle">Reçu de paiement</div></div>
+      <div class="meta">Émis le ${cStr}<strong>#${p.id.split('-')[0]}</strong></div>
+    </div>
+    <div class="igrid">
+      <div class="ibox"><div class="lbl">Étudiant</div><div class="val">${p.student}</div></div>
+      <div class="ibox"><div class="lbl">WhatsApp</div><div class="val">${p.wa}</div></div>
+      <div class="ibox"><div class="lbl">Niveau</div><div class="val">${p.level}</div></div>
+      <div class="ibox"><div class="lbl">Date de paiement</div><div class="val">${dateStr}</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Matière</th><th>Enseignant</th><th>Type</th><th style="text-align:right">Montant</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>${p.matiere}</td><td>${p.enseignant}</td>
+          <td><span class="bdg ${p.type==='avance'?'ba':'bt'}">${p.type==='avance'?'Avance':'Paiement total'}</span></td>
+          <td style="text-align:right;font-weight:600">${p.montant.toLocaleString()} FCFA</td>
+        </tr>
+        <tr class="trow">
+          <td colspan="3">TOTAL</td>
+          <td style="text-align:right">${p.montant.toLocaleString()} FCFA</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="foot">Ce reçu est généré automatiquement par GeniusBill · Système de gestion des frais de cours</div>
+  </div>
+  <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`);win.document.close()
+}
+
+// ── CFG MATIERES ──
+function renderCfgMat(){
+  const cfg=getCfg();const niv=document.getElementById('cfgNiv').value;const mats=cfg.matieres[niv]||[];
+  document.getElementById('cfgMatList').innerHTML=mats.length?mats.map((m,i)=>`<div class="item-row"><span>${m}</span><button class="btn-ghost" onclick="rmMat(${i})">✕</button></div>`).join(''):'<p style="color:var(--text3);font-size:.84rem;padding:.4rem 0">Aucune matière.</p>'
+}
+function addMat(){const val=document.getElementById('cfgMatNew').value.trim();if(!val)return;const cfg=getCfg();const niv=document.getElementById('cfgNiv').value;if(!cfg.matieres[niv])cfg.matieres[niv]=[];cfg.matieres[niv].push(val);saveCfg(cfg);document.getElementById('cfgMatNew').value='';renderCfgMat();toast('Matière ajoutée ✓')}
+function rmMat(i){const cfg=getCfg();const niv=document.getElementById('cfgNiv').value;cfg.matieres[niv].splice(i,1);saveCfg(cfg);renderCfgMat()}
+
+// ── CFG ENSEIGNANTS ──
+function renderCfgEns(){
+  const cfg=getCfg();const niv=document.getElementById('cfgEnsNiv').value;const enss=cfg.enseignants[niv]||[];
+  document.getElementById('cfgEnsList').innerHTML=enss.length?enss.map((e,i)=>`<div class="item-row"><span>${e}</span><button class="btn-ghost" onclick="rmEns(${i})">✕</button></div>`).join(''):'<p style="color:var(--text3);font-size:.84rem;padding:.4rem 0">Aucun enseignant.</p>'
+}
+function addEns(){const val=document.getElementById('cfgEnsNew').value.trim();if(!val)return;const cfg=getCfg();const niv=document.getElementById('cfgEnsNiv').value;if(!cfg.enseignants[niv])cfg.enseignants[niv]=[];cfg.enseignants[niv].push(val);saveCfg(cfg);document.getElementById('cfgEnsNew').value='';renderCfgEns();toast('Enseignant ajouté ✓')}
+function rmEns(i){const cfg=getCfg();const niv=document.getElementById('cfgEnsNiv').value;cfg.enseignants[niv].splice(i,1);saveCfg(cfg);renderCfgEns()}
+
+function changePass(){
+  const p1=document.getElementById('np1').value;const p2=document.getElementById('np2').value;
+  if(!p1){toast('⚠ Entre un mot de passe');return}
+  if(p1!==p2){toast('⚠ Les mots de passe ne correspondent pas');return}
+  const cfg=getCfg();cfg.password=p1;saveCfg(cfg);
+  document.getElementById('np1').value='';document.getElementById('np2').value='';
+  toast('Mot de passe mis à jour ✓')
+}
+
+function clearAll(){
+  if(!confirm('Effacer TOUS les paiements ? Irréversible.'))return;
+  localStorage.removeItem('gb_pays');renderAdmin();renderTable();toast('Données effacées')
+}
+
+// ── TOAST ──
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
+</script>
+</body>
+</html>
