@@ -434,6 +434,27 @@ function normalizePay(row){
   return {...row, montant:Number(row.montant), createdAt:row.created_at};
 }
 
+function normTxt(v){
+  return String(v||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+
+function normDate(v){
+  return v||'no-date';
+}
+
+function makeDuplicateKey(p){
+  return [
+    normTxt(p.student),
+    normTxt(p.wa),
+    normTxt(p.level),
+    normTxt(p.matiere),
+    normTxt(p.enseignant),
+    Number(p.montant)||0,
+    normTxt(p.type),
+    normDate(p.date)
+  ].join('|');
+}
+
 function requireSupabase(){
   if(sbClient)return true;
   toast('⚠ Supabase non chargé ou mal configuré');
@@ -449,11 +470,28 @@ async function getPays(){
 
 async function addPays(entries){
   if(!requireSupabase())throw new Error('Supabase non configuré');
-  const payload=entries.map(({student,wa,level,matiere,enseignant,montant,type,date,createdAt})=>({
-    student,wa,level,matiere,enseignant,montant,type,date,created_at:createdAt
+  const withKeys=entries.map(entry=>({
+    ...entry,
+    duplicate_key: makeDuplicateKey(entry)
   }));
-  const {error}=await sbClient.from('payments').insert(payload);
+  const uniqueMap=new Map();
+  withKeys.forEach(entry=>{if(!uniqueMap.has(entry.duplicate_key))uniqueMap.set(entry.duplicate_key,entry)});
+  const deduped=[...uniqueMap.values()];
+  const keys=deduped.map(x=>x.duplicate_key);
+  const {data:existing,error:existingError}=await sbClient
+    .from('payments')
+    .select('duplicate_key')
+    .in('duplicate_key',keys);
+  if(existingError)throw existingError;
+  const existingKeys=new Set((existing||[]).map(x=>x.duplicate_key));
+  const fresh=deduped.filter(x=>!existingKeys.has(x.duplicate_key));
+  if(!fresh.length)return {inserted:0,ignored:entries.length};
+  const payload=fresh.map(({student,wa,level,matiere,enseignant,montant,type,date,createdAt,duplicate_key})=>({
+    student,wa,level,matiere,enseignant,montant,type,date,created_at:createdAt,duplicate_key
+  }));
+  const {error}=await sbClient.from('payments').upsert(payload,{onConflict:'duplicate_key',ignoreDuplicates:true});
   if(error)throw error;
+  return {inserted:fresh.length,ignored:entries.length-fresh.length};
 }
 
 async function delPay(id){
@@ -558,11 +596,20 @@ async function nextMat(){
   if(!ens){toast('⚠ Sélectionne un enseignant');return}
   if(!amt||amt<0){toast('⚠ Entre un montant valide');return}
   const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2),student:S.name,wa:S.wa,level:`Niveau ${S.level}`,matiere:mat,enseignant:ens,montant:amt,type:typ,date:dat||null,createdAt:new Date().toISOString()};
+  if(S.session.some(e=>makeDuplicateKey(e)===makeDuplicateKey(entry))){
+    toast('⚠ Ce paiement est déjà saisi dans cette soumission');
+    return;
+  }
   S.session.push(entry);S.idx++;
   if(S.idx<S.nb){loadMat();return}
   try{
-    await addPays(S.session);
+    const result=await addPays(S.session);
+    if(!result.inserted){
+      toast('⚠ Paiement déjà enregistré, doublon ignoré');
+      return;
+    }
     showOk();
+    if(result.ignored)toast(`${result.ignored} doublon(s) ignoré(s)`);
   }catch(error){
     console.error(error);
     toast('❌ Enregistrement impossible');
