@@ -17,8 +17,14 @@ create table if not exists public.payments (
 alter table public.payments add column if not exists duplicate_key text;
 
 update public.payments
-set duplicate_key = lower(trim(student)) || '|' ||
-  lower(trim(wa)) || '|' ||
+set duplicate_key = lower(trim(regexp_replace(student, '\s+', ' ', 'g'))) || '|' ||
+  (
+    case
+      when regexp_replace(wa, '\D', '', 'g') ~ '^237[0-9]{9}$' then regexp_replace(wa, '\D', '', 'g')
+      when regexp_replace(wa, '\D', '', 'g') ~ '^[0-9]{9}$' then '237' || regexp_replace(wa, '\D', '', 'g')
+      else lower(trim(wa))
+    end
+  ) || '|' ||
   lower(trim(level)) || '|' ||
   lower(trim(matiere)) || '|' ||
   lower(trim(enseignant)) || '|' ||

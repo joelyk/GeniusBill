@@ -282,6 +282,20 @@ tr:hover td{background:var(--primary-light)}
 </div>
 
 <!-- ══ S4 SUCCESS ══ -->
+<div class="screen" id="s-review">
+  <div class="wrap">
+    <br>
+    <h1>Vérifie tes paiements</h1>
+    <p class="sub">Tu peux revoir, modifier ou supprimer une ligne avant l'enregistrement final.</p>
+    <div class="card" id="reviewCard"></div>
+    <div class="row2">
+      <button class="btn-outline" onclick="show('s-mat')">← Retour</button>
+      <button class="btn" onclick="submitSession()">Confirmer l'enregistrement</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S4 SUCCESS ══ -->
 <div class="screen" id="s-ok">
   <div class="wrap">
     <br>
@@ -290,7 +304,28 @@ tr:hover td{background:var(--primary-light)}
     <p class="sub" id="successSub" style="text-align:center">Récapitulatif de tes paiements.</p>
     <div class="card" id="recapCard"></div>
     <br>
-    <button class="btn" id="newPaymentBtn" onclick="newSession()">Nouveau paiement</button>
+    <div class="row2">
+      <button class="btn-outline" onclick="goStudentSpace()">Mon espace</button>
+      <button class="btn" id="newPaymentBtn" onclick="newSession()">Nouveau paiement</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="s-student">
+  <div class="wrap-lg">
+    <br>
+    <h1>Mon espace</h1>
+    <p class="sub">Retrouve tes paiements enregistrés et prépare une nouvelle saisie.</p>
+    <div class="card" id="studentProfileCard"></div>
+    <div class="card">
+      <div id="studentOwnPayments"></div>
+      <div id="studentOwnEmpty" class="empty" style="display:none">Aucun paiement trouvé pour ce profil.</div>
+    </div>
+    <div class="row2">
+      <button class="btn-outline" onclick="startPaymentForProfile()">Nouveau paiement</button>
+      <button class="btn-outline" onclick="goAdmin()">Accès admin</button>
+    </div>
+    <br><button class="btn-outline" onclick="show('s-home')">← Retour accueil</button>
   </div>
 </div>
 
@@ -446,6 +481,7 @@ const SUPABASE_URL = window.GB_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = window.GB_SUPABASE_ANON_KEY || '';
 const SUPABASE_ADMIN_EMAIL = window.GB_SUPABASE_ADMIN_EMAIL || '';
 const LANG_KEY='gb_lang';
+const STUDENT_PROFILE_KEY='gb_student_profile';
 let LANG=localStorage.getItem(LANG_KEY)||'fr';
 const I18N={
   fr:{
@@ -483,6 +519,36 @@ function saveCfg(c){localStorage.setItem('gb_cfg',JSON.stringify(c))}
 function normalizePay(row){
   return {...row, montant:Number(row.montant), createdAt:row.created_at};
 }
+function phoneDigits(v){return String(v||'').replace(/\D/g,'')}
+function canonicalPhone(v){
+  const digits=phoneDigits(v);
+  if(digits.startsWith('237')&&digits.length===12)return digits;
+  if(digits.length===9)return `237${digits}`;
+  return null;
+}
+function formatPhone(v){
+  const canon=canonicalPhone(v);
+  return canon?`+${canon}`:String(v||'').trim();
+}
+function normalizeStudentName(v){
+  return String(v||'').trim().replace(/\s+/g,' ');
+}
+function getStudentProfile(){
+  try{return JSON.parse(localStorage.getItem(STUDENT_PROFILE_KEY))||null}catch(e){return null}
+}
+function saveStudentProfile(p){localStorage.setItem(STUDENT_PROFILE_KEY,JSON.stringify(p))}
+function refreshNavAction(){
+  const btn=document.getElementById('navAdminBtn');
+  if(!btn)return;
+  const profile=getStudentProfile();
+  if(profile){
+    btn.textContent=LANG==='fr'?'👤 Mon espace':'👤 My space';
+    btn.onclick=goStudentSpace;
+  }else{
+    btn.textContent=t('navAdmin');
+    btn.onclick=goAdmin;
+  }
+}
 function t(k){return I18N[LANG][k]||I18N.fr[k]||k}
 function setLang(lang){
   LANG=lang;
@@ -505,6 +571,7 @@ function applyTranslations(){
   const inWA=document.getElementById('inWA'); if(inWA) inWA.placeholder=LANG==='fr'?'Ex : +237 6XX XXX XXX':'Eg: +237 6XX XXX XXX';
   const inNb=document.getElementById('inNb'); if(inNb) inNb.placeholder=LANG==='fr'?'Ex : 3':'Eg: 3';
   const inAmt=document.getElementById('inAmt'); if(inAmt) inAmt.placeholder=LANG==='fr'?'Ex : 5000':'Eg: 5000';
+  refreshNavAction();
 }
 
 function normTxt(v){
@@ -517,8 +584,8 @@ function normDate(v){
 
 function makeDuplicateKey(p){
   return [
-    normTxt(p.student),
-    normTxt(p.wa),
+    normTxt(normalizeStudentName(p.student)),
+    canonicalPhone(p.wa)||normTxt(p.wa),
     normTxt(p.level),
     normTxt(p.matiere),
     normTxt(p.enseignant),
@@ -614,7 +681,7 @@ function refreshLoginHelp(){
 }
 
 // ── STATE ──
-let S={name:'',wa:'',level:null,nb:0,idx:0,session:[]};
+let S={name:'',wa:'',level:null,nb:0,idx:0,session:[],editIndex:null};
 
 // ── NAV ──
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0)}
@@ -627,15 +694,49 @@ async function goAdmin(){
   }
   show('s-login');
 }
+async function goStudentSpace(){
+  const profile=getStudentProfile();
+  if(!profile){show('s-home');return}
+  await renderStudentSpace();
+  show('s-student');
+}
+async function renderStudentSpace(){
+  const profile=getStudentProfile();
+  const profileCard=document.getElementById('studentProfileCard');
+  const box=document.getElementById('studentOwnPayments');
+  const empty=document.getElementById('studentOwnEmpty');
+  if(!profile||!profileCard||!box||!empty)return;
+  profileCard.innerHTML=`<strong>${profile.name}</strong><div style="color:var(--text3);font-size:.84rem;margin-top:.25rem">${profile.wa} · ${profile.level}</div>`;
+  const all=await getPays();
+  const own=all.filter(p=>normTxt(normalizeStudentName(p.student))===normTxt(profile.name) && (canonicalPhone(p.wa)||normTxt(p.wa))===(canonicalPhone(profile.wa)||normTxt(profile.wa)));
+  if(!own.length){box.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  const total=own.reduce((sum,p)=>sum+p.montant,0);
+  box.innerHTML=`
+    <div class="rcpt-wrap">
+      ${own.map(p=>`<div class="rcpt-row"><span class="rcpt-lbl">${p.matiere} · ${p.enseignant}</span><strong>${p.montant.toLocaleString()} FCFA</strong></div>`).join('')}
+      <div class="rcpt-row"><span>TOTAL</span><span>${total.toLocaleString()} FCFA</span></div>
+    </div>
+  `;
+}
+function startPaymentForProfile(){
+  const profile=getStudentProfile();
+  if(!profile){newSession();return}
+  newSession();
+  show('s-count');
+}
 
 // ── HOME ──
 function pickLvl(n,el){document.querySelectorAll('.lvl-card').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');S.level=n}
 function goCount(){
-  S.name=document.getElementById('inName').value.trim();
-  S.wa=document.getElementById('inWA').value.trim();
+  S.name=normalizeStudentName(document.getElementById('inName').value);
+  const phoneInput=document.getElementById('inWA').value.trim();
+  const canonPhone=canonicalPhone(phoneInput);
+  S.wa=formatPhone(phoneInput);
   if(!S.name){toast('⚠ Entre ton nom complet');return}
-  if(!S.wa){toast('⚠ Entre ton numéro WhatsApp');return}
+  if(!canonPhone){toast('⚠ Entre un numéro WhatsApp valide');return}
   if(!S.level){toast('⚠ Choisis ton niveau');return}
+  document.getElementById('inWA').value=S.wa;
   show('s-count')
 }
 
@@ -643,7 +744,7 @@ function goCount(){
 function goMats(){
   const n=parseInt(document.getElementById('inNb').value);
   if(!n||n<1){toast('⚠ Entre un nombre valide');return}
-  S.nb=n;S.idx=0;S.session=[];
+  S.nb=n;S.idx=0;S.session=[];S.editIndex=null;
   loadMat();show('s-mat')
 }
 
@@ -677,19 +778,83 @@ async function nextMat(){
   if(!ens){toast('⚠ Sélectionne un enseignant');return}
   if(!amt||amt<0){toast('⚠ Entre un montant valide');return}
   const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2),student:S.name,wa:S.wa,level:`Niveau ${S.level}`,matiere:mat,enseignant:ens,montant:amt,type:typ,date:dat||null,createdAt:new Date().toISOString()};
+  if(S.editIndex!==null){
+    if(S.session.some((e,i)=>i!==S.editIndex&&makeDuplicateKey(e)===makeDuplicateKey(entry))){
+      toast('⚠ Ce paiement est déjà saisi dans cette soumission');
+      return;
+    }
+    S.session[S.editIndex]=entry;
+    S.editIndex=null;
+    renderReview();
+    show('s-review');
+    return;
+  }
   if(S.session.some(e=>makeDuplicateKey(e)===makeDuplicateKey(entry))){
     toast('⚠ Ce paiement est déjà saisi dans cette soumission');
     return;
   }
   S.session.push(entry);S.idx++;
   if(S.idx<S.nb){loadMat();return}
+  renderReview();
+  show('s-review');
+}
+
+function renderReview(){
+  const box=document.getElementById('reviewCard');
+  if(!box)return;
+  const total=S.session.reduce((sum,item)=>sum+item.montant,0);
+  box.innerHTML=`
+    <div style="margin-bottom:.8rem"><strong>${S.name}</strong><div style="color:var(--text3);font-size:.82rem">${S.wa} · Niveau ${S.level}</div></div>
+    <div class="rcpt-wrap">
+      ${S.session.map((item,i)=>`
+        <div class="rcpt-row" style="display:block">
+          <div style="display:flex;justify-content:space-between;gap:.8rem">
+            <span class="rcpt-lbl">${item.matiere} · ${item.enseignant}</span>
+            <strong>${item.montant.toLocaleString()} FCFA</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.45rem">
+            <span class="badge ${item.type==='avance'?'b-avance':'b-total'}">${item.type}</span>
+            <span>
+              <button class="btn-outline btn-sm" onclick="editReviewItem(${i})">Modifier</button>
+              <button class="btn-ghost" onclick="removeReviewItem(${i})">Supprimer</button>
+            </span>
+          </div>
+        </div>
+      `).join('')}
+      <div class="rcpt-row"><span>TOTAL</span><span>${total.toLocaleString()} FCFA</span></div>
+    </div>
+  `;
+}
+
+function editReviewItem(i){
+  const item=S.session[i];
+  if(!item)return;
+  S.editIndex=i;
+  document.getElementById('selMat').value=item.matiere;
+  document.getElementById('selEns').value=item.enseignant;
+  document.getElementById('inAmt').value=item.montant;
+  document.getElementById('inDate').value=item.date||'';
+  document.getElementById(item.type==='avance'?'ptA':'ptT').checked=true;
+  show('s-mat');
+}
+
+function removeReviewItem(i){
+  S.session.splice(i,1);
+  S.nb=S.session.length;
+  if(!S.session.length){show('s-count');return}
+  renderReview();
+}
+
+async function submitSession(){
   try{
     const result=await addPays(S.session);
     if(!result.inserted){
       toast('⚠ Paiement déjà enregistré, doublon ignoré');
       return;
     }
+    saveStudentProfile({name:S.name,wa:S.wa,level:`Niveau ${S.level}`});
     showOk();
+    refreshNavAction();
     if(result.ignored)toast(`${result.ignored} doublon(s) ignoré(s)`);
   }catch(error){
     console.error(error);
@@ -707,10 +872,15 @@ function showOk(){
 }
 
 function newSession(){
-  S={name:'',wa:'',level:null,nb:0,idx:0,session:[]};
-  document.getElementById('inName').value='';
-  document.getElementById('inWA').value='';
+  const profile=getStudentProfile();
+  S={name:'',wa:'',level:null,nb:0,idx:0,session:[],editIndex:null};
+  document.getElementById('inName').value=profile?.name||'';
+  document.getElementById('inWA').value=profile?.wa||'';
   document.querySelectorAll('.lvl-card').forEach(c=>c.classList.remove('sel'));
+  if(profile?.level){
+    const levelNum=Number(String(profile.level).replace(/\D/g,''));
+    if(levelNum){S.level=levelNum;document.querySelectorAll('.lvl-card')[levelNum-1]?.classList.add('sel')}
+  }
   show('s-home')
 }
 
@@ -798,6 +968,7 @@ async function renderGroupedStudents(){
     g.total+=p.montant;
   });
   const data=[...groups.values()].sort((a,b)=>a.student.localeCompare(b.student));
+  window.__gbGroupedCache=data;
   if(!data.length){box.innerHTML='';empty.style.display='block';return}
   empty.style.display='none';
   box.innerHTML=data.map(g=>`
@@ -809,8 +980,50 @@ async function renderGroupedStudents(){
         ${g.items.map(item=>`<div class="student-line"><span>${item.matiere} · ${item.enseignant}</span><strong>${item.montant.toLocaleString()} FCFA</strong></div>`).join('')}
       </div>
       <div class="student-total"><span>TOTAL</span><span>${g.total.toLocaleString()} FCFA</span></div>
+      <div style="display:flex;gap:.5rem;margin-top:.9rem;flex-wrap:wrap">
+        <button class="btn-outline btn-sm" onclick="cleanGroupedStudentDuplicates('${encodeURIComponent(`${normTxt(g.student)}|${canonicalPhone(g.wa)||normTxt(g.wa)}`)}')">Supp doublons</button>
+        <button class="btn-outline btn-sm" onclick="printGroupedStudentSheet('${encodeURIComponent(`${normTxt(g.student)}|${canonicalPhone(g.wa)||normTxt(g.wa)}`)}')">Générer fiche</button>
+      </div>
     </div>
   `).join('');
+}
+
+function getGroupedStudentByKey(encodedKey){
+  const key=decodeURIComponent(encodedKey);
+  const groups=window.__gbGroupedCache||[];
+  return groups.find(g=>`${normTxt(g.student)}|${canonicalPhone(g.wa)||normTxt(g.wa)}`===key);
+}
+
+async function cleanGroupedStudentDuplicates(encodedKey){
+  const group=getGroupedStudentByKey(encodedKey);
+  if(!group)return;
+  const ordered=group.items.slice().sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  const seen=new Set(); const ids=[];
+  ordered.forEach(item=>{const key=makeDuplicateKey(item); if(seen.has(key))ids.push(item.id); else seen.add(key)});
+  if(!ids.length){toast('Aucun doublon pour cet étudiant');return}
+  if(await delPays(ids)){
+    await renderAdmin();
+    await renderGroupedStudents();
+    toast(`${ids.length} doublon(s) supprimé(s)`);
+  }
+}
+
+function printGroupedStudentSheet(encodedKey){
+  const group=getGroupedStudentByKey(encodedKey);
+  if(!group)return;
+  const win=window.open('','_blank','width=760,height=980');
+  win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><title>Fiche paiement - ${group.student}</title>
+  <style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;color:#1e293b;padding:32px} h1{margin:0 0 8px} .sub{color:#64748b;margin-bottom:20px}
+  table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:left} th{background:#f8fafc}
+  .total{font-weight:800;color:#2563eb} .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+  </style></head><body>
+  <div class="hdr"><div><h1>${group.student}</h1><div class="sub">${group.level} · ${group.wa}</div></div><div>${new Date().toLocaleDateString('fr-FR')}</div></div>
+  <table><thead><tr><th>Matière</th><th>Enseignant</th><th>Type</th><th>Montant</th></tr></thead><tbody>
+  ${group.items.map(item=>`<tr><td>${item.matiere}</td><td>${item.enseignant}</td><td>${item.type}</td><td>${item.montant.toLocaleString()} FCFA</td></tr>`).join('')}
+  <tr class="total"><td colspan="3">TOTAL</td><td>${group.total.toLocaleString()} FCFA</td></tr></tbody></table>
+  <script>window.onload=function(){window.print()}<\/script></body></html>`);
+  win.document.close();
 }
 
 async function delRow(id){
