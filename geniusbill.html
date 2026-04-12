@@ -6,6 +6,8 @@
 <title>GeniusBill</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./supabase-config.js"></script>
 <style>
 :root {
   --bg:#f4f6fb; --white:#fff; --surface:#f0f2f8; --border:#e2e6f0;
@@ -279,10 +281,12 @@ tr:hover td{background:var(--primary-light)}
     <div class="pass-box">
       <div style="font-size:2.8rem;margin-bottom:.9rem">🔒</div>
       <h2>Accès Administrateur</h2>
-      <p class="sub" id="loginHelp">Accès réservé à l'équipe de gestion.</p>
+      <p class="sub" id="loginHelp">Connexion sécurisée via Supabase Auth.</p>
+      <input id="inEmail" type="email" placeholder="Email admin"
+             onkeydown="if(event.key==='Enter')checkPass()"/>
       <input id="inPass" type="password" placeholder="Mot de passe"
              onkeydown="if(event.key==='Enter')checkPass()"/>
-      <button class="btn" onclick="checkPass()">Entrer</button>
+      <button class="btn" onclick="checkPass()">Se connecter</button>
       <br><br>
       <button class="btn-outline" onclick="show('s-home')">← Retour</button>
     </div>
@@ -372,13 +376,9 @@ tr:hover td{background:var(--primary-light)}
         </div>
       </div>
       <div class="card">
-        <h2>🔑 Mot de passe admin</h2>
-        <p class="sub">Mot de passe fixe configuré dans l'application.</p>
-        <div class="row2">
-          <div class="field"><label>Nouveau</label><input id="np1" type="password" placeholder="Indisponible" disabled/></div>
-          <div class="field"><label>Confirmer</label><input id="np2" type="password" placeholder="Indisponible" disabled/></div>
-        </div>
-        <button class="btn" style="max-width:200px" onclick="changePass()">Modifier</button>
+        <h2>🔐 Admin</h2>
+        <p class="sub">Le dashboard utilise Supabase Auth. Crée un seul compte admin dans Supabase.</p>
+        <button class="btn" style="max-width:220px" onclick="logoutAdmin()">Se déconnecter</button>
       </div>
       <div class="card dz">
         <h2>⚠ Zone danger</h2>
@@ -397,7 +397,6 @@ tr:hover td{background:var(--primary-light)}
 <script>
 // ── DEFAULT CONFIG ──
 const DEFAULTS = {
-  adminPasswordHash: "a6761ccff1191f3ee53acada4f7965241538511ef6eb52d37974507ab5a9023e",
   matieres: {
     "1": ["Haskell","C++","Système d'exploitation","Réseau"],
     "2": ["Génie logiciel","Système d'information","Programmation web","Théorie des marchés","Électronique numérique 2"],
@@ -410,22 +409,81 @@ const DEFAULTS = {
   }
 };
 
+const SUPABASE_URL = window.GB_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = window.GB_SUPABASE_ANON_KEY || '';
+const SUPABASE_ADMIN_EMAIL = window.GB_SUPABASE_ADMIN_EMAIL || '';
+const HAS_REAL_SUPABASE_CONFIG =
+  SUPABASE_URL && SUPABASE_ANON_KEY &&
+  !SUPABASE_URL.includes('YOUR_') &&
+  !SUPABASE_ANON_KEY.includes('YOUR_');
+
+const supabase = HAS_REAL_SUPABASE_CONFIG
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
 // ── STORAGE ──
 function getCfg(){try{return JSON.parse(localStorage.getItem('gb_cfg'))||JSON.parse(JSON.stringify(DEFAULTS))}catch(e){return JSON.parse(JSON.stringify(DEFAULTS))}}
 function saveCfg(c){localStorage.setItem('gb_cfg',JSON.stringify(c))}
-function getPays(){try{return JSON.parse(localStorage.getItem('gb_pays'))||[]}catch(e){return[]}}
-function addPay(p){const a=getPays();a.push(p);localStorage.setItem('gb_pays',JSON.stringify(a))}
-function delPay(id){localStorage.setItem('gb_pays',JSON.stringify(getPays().filter(p=>p.id!==id)))}
+function normalizePay(row){
+  return {...row, montant:Number(row.montant), createdAt:row.created_at};
+}
 
-async function sha256(txt){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+function requireSupabase(){
+  if(supabase)return true;
+  toast('⚠ Configure Supabase dans supabase-config.js');
+  return false;
+}
+
+async function getPays(){
+  if(!requireSupabase())return [];
+  const {data,error}=await supabase.from('payments').select('*').order('created_at',{ascending:false});
+  if(error){console.error(error);toast('❌ Impossible de charger les paiements');return []}
+  return (data||[]).map(normalizePay);
+}
+
+async function addPays(entries){
+  if(!requireSupabase())throw new Error('Supabase non configuré');
+  const payload=entries.map(({student,wa,level,matiere,enseignant,montant,type,date,createdAt})=>({
+    student,wa,level,matiere,enseignant,montant,type,date,created_at:createdAt
+  }));
+  const {error}=await supabase.from('payments').insert(payload);
+  if(error)throw error;
+}
+
+async function delPay(id){
+  if(!requireSupabase())return false;
+  const {error}=await supabase.from('payments').delete().eq('id',id);
+  if(error){console.error(error);toast('❌ Suppression impossible');return false}
+  return true;
+}
+
+async function clearPays(){
+  if(!requireSupabase())return false;
+  const {error}=await supabase.from('payments').delete().not('id','is',null);
+  if(error){console.error(error);toast('❌ Effacement impossible');return false}
+  return true;
+}
+
+async function getSession(){
+  if(!supabase)return null;
+  const {data:{session}}=await supabase.auth.getSession();
+  return session;
+}
+
+async function isAdminAuthenticated(){
+  return !!(await getSession());
 }
 
 function refreshLoginHelp(){
   const el=document.getElementById('loginHelp');
   if(!el)return;
-  el.textContent="Accès réservé à l'équipe de gestion.";
+  if(!HAS_REAL_SUPABASE_CONFIG){
+    el.textContent="Configure d'abord Supabase dans supabase-config.js.";
+    return;
+  }
+  el.textContent=SUPABASE_ADMIN_EMAIL
+    ? `Connexion admin Supabase pour ${SUPABASE_ADMIN_EMAIL}.`
+    : "Connexion sécurisée via Supabase Auth.";
 }
 
 // ── STATE ──
@@ -433,7 +491,15 @@ let S={name:'',wa:'',level:null,nb:0,idx:0,session:[]};
 
 // ── NAV ──
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0)}
-function goAdmin(){refreshLoginHelp();show('s-login')}
+async function goAdmin(){
+  refreshLoginHelp();
+  if(await isAdminAuthenticated()){
+    show('s-admin');
+    await renderAdmin();
+    return;
+  }
+  show('s-login');
+}
 
 // ── HOME ──
 function pickLvl(n,el){document.querySelectorAll('.lvl-card').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');S.level=n}
@@ -474,7 +540,7 @@ function loadMat(){
   document.getElementById('ptA').checked=true
 }
 
-function nextMat(){
+async function nextMat(){
   const mat=document.getElementById('selMat').value;
   const ens=document.getElementById('selEns').value;
   const amt=parseInt(document.getElementById('inAmt').value);
@@ -485,7 +551,14 @@ function nextMat(){
   if(!amt||amt<0){toast('⚠ Entre un montant valide');return}
   const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2),student:S.name,wa:S.wa,level:`Niveau ${S.level}`,matiere:mat,enseignant:ens,montant:amt,type:typ,date:dat||null,createdAt:new Date().toISOString()};
   S.session.push(entry);S.idx++;
-  if(S.idx<S.nb){loadMat()}else{S.session.forEach(e=>addPay(e));showOk()}
+  if(S.idx<S.nb){loadMat();return}
+  try{
+    await addPays(S.session);
+    showOk();
+  }catch(error){
+    console.error(error);
+    toast('❌ Enregistrement impossible');
+  }
 }
 
 function showOk(){
@@ -507,27 +580,35 @@ function newSession(){
 
 // ── ADMIN ──
 async function checkPass(){
+  if(!requireSupabase())return;
+  const email=document.getElementById('inEmail').value.trim();
   const input=document.getElementById('inPass');
   const pass=input.value.trim();
-  if(!pass){toast('⚠ Entre un mot de passe');return}
-  const hash=await sha256(pass);
-  if(hash===DEFAULTS.adminPasswordHash){
-    input.value='';show('s-admin');renderAdmin()
-  }else{toast('❌ Mot de passe incorrect')}
+  if(!email){toast('⚠ Entre l’email admin');return}
+  if(!pass){toast('⚠ Entre le mot de passe');return}
+  const {error}=await supabase.auth.signInWithPassword({email,password:pass});
+  if(error){console.error(error);toast('❌ Connexion admin impossible');return}
+  document.getElementById('inEmail').value='';
+  input.value='';
+  show('s-admin');
+  await renderAdmin();
 }
 
-function switchTab(name,el){
+async function switchTab(name,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
   ['overview','students','config'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===name?'block':'none'});
-  if(name==='students')renderTable();
+  if(name==='students')await renderTable();
   if(name==='config'){renderCfgMat();renderCfgEns()}
-  if(name==='overview'){renderStats();renderCharts()}
+  if(name==='overview')await renderAdmin();
 }
 
-function renderAdmin(){renderStats();renderCharts()}
+async function renderAdmin(){
+  const all=await getPays();
+  renderStats(all);
+  renderCharts(all);
+}
 
-function renderStats(){
-  const all=getPays();
+function renderStats(all){
   const total=all.reduce((s,p)=>s+p.montant,0);
   const students=[...new Set(all.map(p=>p.student))].length;
   const avances=all.filter(p=>p.type==='avance').length;
@@ -539,8 +620,7 @@ function renderStats(){
 }
 
 let cMat,cEns;
-function renderCharts(){
-  const all=getPays();
+function renderCharts(all){
   const byMat={},byEns={};
   all.forEach(p=>{byMat[p.matiere]=(byMat[p.matiere]||0)+p.montant;byEns[p.enseignant]=(byEns[p.enseignant]||0)+p.montant});
   const COLS=['#2563eb','#0ea5e9','#16a34a','#d97706','#7c3aed','#db2777','#ea580c','#0d9488','#4f46e5'];
@@ -550,10 +630,10 @@ function renderCharts(){
   cEns=new Chart(document.getElementById('chartEns'),{type:'doughnut',data:{labels:Object.keys(byEns),datasets:[{data:Object.values(byEns),backgroundColor:COLS,borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{labels:{color:'#475569',font:{size:11}}}}}})
 }
 
-function renderTable(){
+async function renderTable(){
   const q=(document.getElementById('fSearch')?.value||'').toLowerCase();
   const niv=document.getElementById('fNiv')?.value||'';
-  let all=getPays();
+  let all=await getPays();
   if(q)all=all.filter(p=>p.student.toLowerCase().includes(q)||p.wa.includes(q));
   if(niv)all=all.filter(p=>p.level===niv);
   const body=document.getElementById('tBody');
@@ -563,11 +643,18 @@ function renderTable(){
   body.innerHTML=all.map(p=>{const lv=p.level.replace('Niveau ','');return`<tr><td><div class="td-name">${p.student}</div></td><td><div class="td-wa">${p.wa}</div></td><td><span class="badge b-l${lv}">${p.level}</span></td><td>${p.matiere}</td><td>${p.enseignant}</td><td><strong>${p.montant.toLocaleString()} FCFA</strong></td><td><span class="badge ${p.type==='avance'?'b-avance':'b-total'}">${p.type}</span></td><td style="color:var(--text3);font-size:.8rem">${p.date||'—'}</td><td><button class="btn-pdf" onclick="printRcpt('${p.id}')">🖨 Reçu PDF</button></td><td><button class="btn-ghost" onclick="delRow('${p.id}')">✕</button></td></tr>`}).join('')
 }
 
-function delRow(id){if(!confirm('Supprimer ce paiement ?'))return;delPay(id);renderTable();renderStats();renderCharts();toast('Paiement supprimé')}
+async function delRow(id){
+  if(!confirm('Supprimer ce paiement ?'))return;
+  if(await delPay(id)){
+    await renderTable();
+    await renderAdmin();
+    toast('Paiement supprimé');
+  }
+}
 
 // ── PDF RECEIPT ──
-function printRcpt(id){
-  const p=getPays().find(x=>x.id===id);if(!p)return;
+async function printRcpt(id){
+  const p=(await getPays()).find(x=>x.id===id);if(!p)return;
   const win=window.open('','_blank','width=720,height=950');
   const dateStr=p.date?new Date(p.date).toLocaleDateString('fr-FR'):'—';
   const cStr=new Date(p.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
@@ -642,13 +729,20 @@ function renderCfgEns(){
 function addEns(){const val=document.getElementById('cfgEnsNew').value.trim();if(!val)return;const cfg=getCfg();const niv=document.getElementById('cfgEnsNiv').value;if(!cfg.enseignants[niv])cfg.enseignants[niv]=[];cfg.enseignants[niv].push(val);saveCfg(cfg);document.getElementById('cfgEnsNew').value='';renderCfgEns();toast('Enseignant ajouté ✓')}
 function rmEns(i){const cfg=getCfg();const niv=document.getElementById('cfgEnsNiv').value;cfg.enseignants[niv].splice(i,1);saveCfg(cfg);renderCfgEns()}
 
-async function changePass(){
-  toast('Mot de passe admin fixe: modification désactivée')
+async function logoutAdmin(){
+  if(!supabase){show('s-home');return}
+  await supabase.auth.signOut();
+  show('s-home');
+  toast('Session admin fermée');
 }
 
-function clearAll(){
+async function clearAll(){
   if(!confirm('Effacer TOUS les paiements ? Irréversible.'))return;
-  localStorage.removeItem('gb_pays');renderAdmin();renderTable();toast('Données effacées')
+  if(await clearPays()){
+    await renderAdmin();
+    await renderTable();
+    toast('Données effacées');
+  }
 }
 
 // ── TOAST ──
