@@ -28,6 +28,10 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 nav{background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.5rem;position:sticky;top:0;z-index:200;box-shadow:var(--shadow)}
 .logo{font-weight:800;font-size:1.22rem;color:var(--primary);letter-spacing:-.4px}
 .logo span{color:var(--text)}
+.nav-right{display:flex;align-items:center;gap:.6rem}
+.lang-switch{display:flex;gap:.2rem;padding:.18rem;border:1px solid var(--border);border-radius:999px;background:var(--white)}
+.lang-switch button{border:none;background:none;color:var(--text2);padding:.28rem .55rem;border-radius:999px;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}
+.lang-switch button.active{background:var(--primary-light);color:var(--primary)}
 .btn-nav{background:none;border:1px solid var(--border);color:var(--text2);padding:.38rem .9rem;border-radius:999px;cursor:pointer;font-size:.82rem;font-family:inherit;font-weight:500;transition:all .15s}
 .btn-nav:hover{border-color:var(--primary);color:var(--primary)}
 
@@ -130,6 +134,14 @@ td{padding:.6rem 1rem;border-top:1px solid var(--border);vertical-align:middle}
 tr:hover td{background:var(--primary-light)}
 .td-name{font-weight:600}
 .td-wa{color:var(--text3);font-size:.79rem}
+.student-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+.student-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:1rem;box-shadow:var(--shadow)}
+.student-card h3{font-size:1rem;margin-bottom:.2rem}
+.student-meta{font-size:.82rem;color:var(--text3);margin-bottom:.8rem}
+.student-subjects{display:flex;flex-direction:column;gap:.45rem;margin:.8rem 0}
+.student-line{display:flex;justify-content:space-between;gap:.7rem;font-size:.84rem;padding:.45rem 0;border-top:1px solid var(--border)}
+.student-line:first-child{border-top:none;padding-top:0}
+.student-total{display:flex;justify-content:space-between;font-weight:800;color:var(--primary);padding-top:.7rem;border-top:1px solid var(--border)}
 
 /* CHARTS */
 .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
@@ -168,26 +180,32 @@ tr:hover td{background:var(--primary-light)}
 
 <nav>
   <div class="logo">Genius<span>Bill</span></div>
-  <button class="btn-nav" onclick="goAdmin()">⚙ Admin</button>
+  <div class="nav-right">
+    <div class="lang-switch">
+      <button id="langFr" type="button" onclick="setLang('fr')">FR</button>
+      <button id="langEn" type="button" onclick="setLang('en')">EN</button>
+    </div>
+    <button class="btn-nav" id="navAdminBtn" onclick="goAdmin()">⚙ Admin</button>
+  </div>
 </nav>
 
 <!-- ══ S1 HOME ══ -->
 <div class="screen active" id="s-home">
   <div class="wrap">
     <br>
-    <h1>Enregistre tes frais de cours 📚</h1>
-    <p class="sub">Renseigne tes informations, puis saisis tes paiements matière par matière.</p>
+    <h1 id="homeTitle">Enregistre tes frais de cours 📚</h1>
+    <p class="sub" id="homeSub">Renseigne tes informations, puis saisis tes paiements matière par matière.</p>
     <div class="card">
       <div class="field">
-        <label>Nom complet</label>
+        <label id="nameLabel">Nom complet</label>
         <input id="inName" type="text" placeholder="Ex : Ngueguim Joel Henzo"/>
       </div>
       <div class="field">
-        <label>Numéro WhatsApp <span class="opt">(celui présent dans le groupe)</span></label>
+        <label id="waLabel">Numéro WhatsApp <span class="opt" id="waLabelOpt">(celui présent dans le groupe)</span></label>
         <input id="inWA" type="tel" placeholder="Ex : +237 6XX XXX XXX"/>
       </div>
     </div>
-    <h2>Choisis ton niveau</h2>
+    <h2 id="levelTitle">Choisis ton niveau</h2>
     <div class="lvl-grid">
       <div class="lvl-card" onclick="pickLvl(1,this)">
         <div class="ic">🌱</div><div class="nm">Niveau 1</div><div class="hn">L1</div>
@@ -199,7 +217,7 @@ tr:hover td{background:var(--primary-light)}
         <div class="ic">🎓</div><div class="nm">Niveau 3</div><div class="hn">L3</div>
       </div>
     </div>
-    <button class="btn" onclick="goCount()">Continuer →</button>
+    <button class="btn" id="continueBtn" onclick="goCount()">Continuer →</button>
   </div>
 </div>
 
@@ -207,16 +225,16 @@ tr:hover td{background:var(--primary-light)}
 <div class="screen" id="s-count">
   <div class="wrap">
     <br>
-    <h1>Combien de matières as-tu réglé ?</h1>
-    <p class="sub">Tu vas les saisir une par une ensuite.</p>
+    <h1 id="countTitle">Combien de matières as-tu réglé ?</h1>
+    <p class="sub" id="countSub">Tu vas les saisir une par une ensuite.</p>
     <div class="card">
       <div class="field">
-        <label>Nombre de matières</label>
+        <label id="nbLabel">Nombre de matières</label>
         <input id="inNb" type="number" min="1" max="20" placeholder="Ex : 3"/>
       </div>
-      <button class="btn" onclick="goMats()">Démarrer la saisie →</button>
+      <button class="btn" id="startBtn" onclick="goMats()">Démarrer la saisie →</button>
     </div>
-    <br><button class="btn-outline" onclick="show('s-home')">← Retour</button>
+    <br><button class="btn-outline" id="backBtn1" onclick="show('s-home')">← Retour</button>
   </div>
 </div>
 
@@ -234,31 +252,31 @@ tr:hover td{background:var(--primary-light)}
     </div>
     <div class="card">
       <div class="field">
-        <label>Matière</label>
+        <label id="matLabel">Matière</label>
         <select id="selMat"><option value="">— Sélectionner —</option></select>
       </div>
       <div class="field">
-        <label>Enseignant</label>
+        <label id="teacherLabel">Enseignant</label>
         <select id="selEns"><option value="">— Sélectionner —</option></select>
       </div>
       <div class="row2">
         <div class="field">
-          <label>Montant (FCFA)</label>
+          <label id="amountLabel">Montant (FCFA)</label>
           <input id="inAmt" type="number" min="0" placeholder="Ex : 5000"/>
         </div>
         <div class="field">
-          <label>Date <span class="opt">(optionnel)</span></label>
+          <label id="dateLabel">Date <span class="opt" id="dateOpt">(optionnel)</span></label>
           <input id="inDate" type="date"/>
         </div>
       </div>
       <div class="field">
-        <label>Type de paiement</label>
+        <label id="paymentTypeLabel">Type de paiement</label>
         <div class="tog-wrap">
-          <input type="radio" name="pt" id="ptA" value="avance" checked/><label for="ptA">💰 Avance</label>
-          <input type="radio" name="pt" id="ptT" value="total"/><label for="ptT">✅ Paiement total</label>
+          <input type="radio" name="pt" id="ptA" value="avance" checked/><label for="ptA" id="advanceLabel">💰 Avance</label>
+          <input type="radio" name="pt" id="ptT" value="total"/><label for="ptT" id="fullPaymentLabel">✅ Paiement total</label>
         </div>
       </div>
-      <button class="btn" onclick="nextMat()">Suivant →</button>
+      <button class="btn" id="nextBtn" onclick="nextMat()">Suivant →</button>
     </div>
   </div>
 </div>
@@ -268,11 +286,11 @@ tr:hover td{background:var(--primary-light)}
   <div class="wrap">
     <br>
     <div style="text-align:center;font-size:2.8rem;margin-bottom:.5rem">✅</div>
-    <h1 style="text-align:center">Enregistrement réussi !</h1>
-    <p class="sub" style="text-align:center">Récapitulatif de tes paiements.</p>
+    <h1 id="successTitle" style="text-align:center">Enregistrement réussi !</h1>
+    <p class="sub" id="successSub" style="text-align:center">Récapitulatif de tes paiements.</p>
     <div class="card" id="recapCard"></div>
     <br>
-    <button class="btn" onclick="newSession()">Nouveau paiement</button>
+    <button class="btn" id="newPaymentBtn" onclick="newSession()">Nouveau paiement</button>
   </div>
 </div>
 
@@ -281,15 +299,15 @@ tr:hover td{background:var(--primary-light)}
   <div class="wrap">
     <div class="pass-box">
       <div style="font-size:2.8rem;margin-bottom:.9rem">🔒</div>
-      <h2>Accès Administrateur</h2>
+      <h2 id="adminLoginHeading">Accès Administrateur</h2>
       <p class="sub" id="loginHelp">Connexion sécurisée via Supabase Auth.</p>
       <input id="inEmail" type="email" placeholder="Email admin"
              onkeydown="if(event.key==='Enter')checkPass()"/>
       <input id="inPass" type="password" placeholder="Mot de passe"
              onkeydown="if(event.key==='Enter')checkPass()"/>
-      <button class="btn" onclick="checkPass()">Se connecter</button>
+      <button class="btn" id="loginBtn" onclick="checkPass()">Se connecter</button>
       <br><br>
-      <button class="btn-outline" onclick="show('s-home')">← Retour</button>
+      <button class="btn-outline" id="backBtn2" onclick="show('s-home')">← Retour</button>
     </div>
   </div>
 </div>
@@ -298,13 +316,14 @@ tr:hover td{background:var(--primary-light)}
 <div class="screen" id="s-admin">
   <div class="wrap-lg">
     <br>
-    <h1>Dashboard <span style="color:var(--primary)">GeniusBill</span></h1>
-    <p class="sub">Gestion complète des frais de cours.</p>
+    <h1 id="dashboardTitle">Dashboard <span style="color:var(--primary)">GeniusBill</span></h1>
+    <p class="sub" id="dashboardSub">Gestion complète des frais de cours.</p>
 
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('overview',this)">📊 Vue globale</button>
-      <button class="tab" onclick="switchTab('students',this)">👥 Paiements</button>
-      <button class="tab" onclick="switchTab('config',this)">⚙ Configuration</button>
+      <button class="tab active" id="overviewTabBtn" onclick="switchTab('overview',this)">📊 Vue globale</button>
+      <button class="tab" id="studentsTabBtn" onclick="switchTab('students',this)">👥 Paiements</button>
+      <button class="tab" id="groupedTabBtn" onclick="switchTab('grouped',this)">🧾 Par étudiant</button>
+      <button class="tab" id="configTabBtn" onclick="switchTab('config',this)">⚙ Configuration</button>
     </div>
 
     <!-- OVERVIEW -->
@@ -344,6 +363,18 @@ tr:hover td{background:var(--primary-light)}
         </div>
         <div id="tEmpty" class="empty" style="display:none">Aucun paiement enregistré pour l'instant.</div>
       </div>
+    </div>
+
+    <div id="tab-grouped" style="display:none">
+      <div class="filter-bar">
+        <input id="gSearch" placeholder="🔍 Rechercher étudiant ou WhatsApp…" oninput="renderGroupedStudents()"/>
+        <select id="gNiv" onchange="renderGroupedStudents()">
+          <option value="">Tous les niveaux</option>
+          <option>Niveau 1</option><option>Niveau 2</option><option>Niveau 3</option>
+        </select>
+      </div>
+      <div id="studentGroups" class="student-grid"></div>
+      <div id="gEmpty" class="empty" style="display:none">Aucun paiement enregistré pour l'instant.</div>
     </div>
 
     <!-- CONFIG -->
@@ -414,6 +445,32 @@ const DEFAULTS = {
 const SUPABASE_URL = window.GB_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = window.GB_SUPABASE_ANON_KEY || '';
 const SUPABASE_ADMIN_EMAIL = window.GB_SUPABASE_ADMIN_EMAIL || '';
+const LANG_KEY='gb_lang';
+let LANG=localStorage.getItem(LANG_KEY)||'fr';
+const I18N={
+  fr:{
+    navAdmin:'⚙ Admin',homeTitle:'Enregistre tes frais de cours 📚',homeSub:'Renseigne tes informations, puis saisis tes paiements matière par matière.',
+    nameLabel:'Nom complet',waLabel:'Numéro WhatsApp',waOpt:'(celui présent dans le groupe)',levelTitle:'Choisis ton niveau',continueBtn:'Continuer →',
+    countTitle:'Combien de matières as-tu réglé ?',countSub:'Tu vas les saisir une par une ensuite.',nbLabel:'Nombre de matières',startBtn:'Démarrer la saisie →',back:'← Retour',
+    matLabel:'Matière',teacherLabel:'Enseignant',amountLabel:'Montant (FCFA)',dateLabel:'Date',dateOpt:'(optionnel)',paymentType:'Type de paiement',advance:'💰 Avance',fullPay:'✅ Paiement total',next:'Suivant →',
+    successTitle:'Enregistrement réussi !',successSub:'Récapitulatif de tes paiements.',newPayment:'Nouveau paiement',
+    adminLoginHeading:'Accès Administrateur',loginBtn:'Se connecter',dashboardSub:'Gestion complète des frais de cours.',
+    overviewTab:'📊 Vue globale',studentsTab:'👥 Paiements',groupedTab:'🧾 Par étudiant',configTab:'⚙ Configuration',
+    groupedEmpty:"Aucun paiement enregistré pour l'instant.",searchStudent:'🔍 Rechercher étudiant ou WhatsApp…',allLevels:'Tous les niveaux',
+    subjectsPaid:'Matières payées',total:'TOTAL'
+  },
+  en:{
+    navAdmin:'⚙ Admin',homeTitle:'Record your course fees 📚',homeSub:'Fill in your details, then enter your payments subject by subject.',
+    nameLabel:'Full name',waLabel:'WhatsApp number',waOpt:'(the one used in the group)',levelTitle:'Choose your level',continueBtn:'Continue →',
+    countTitle:'How many subjects have you paid for?',countSub:'You will enter them one by one next.',nbLabel:'Number of subjects',startBtn:'Start entry →',back:'← Back',
+    matLabel:'Subject',teacherLabel:'Teacher',amountLabel:'Amount (FCFA)',dateLabel:'Date',dateOpt:'(optional)',paymentType:'Payment type',advance:'💰 Deposit',fullPay:'✅ Full payment',next:'Next →',
+    successTitle:'Payment recorded!',successSub:'Summary of your payments.',newPayment:'New payment',
+    adminLoginHeading:'Administrator Access',loginBtn:'Sign in',dashboardSub:'Complete course-fee management.',
+    overviewTab:'📊 Overview',studentsTab:'👥 Payments',groupedTab:'🧾 By student',configTab:'⚙ Settings',
+    groupedEmpty:'No payments recorded yet.',searchStudent:'🔍 Search student or WhatsApp…',allLevels:'All levels',
+    subjectsPaid:'Paid subjects',total:'TOTAL'
+  }
+};
 const createSupabaseClient =
   window.supabase?.createClient ||
   window.supabase?.default?.createClient ||
@@ -433,6 +490,34 @@ function getCfg(){try{return JSON.parse(localStorage.getItem('gb_cfg'))||JSON.pa
 function saveCfg(c){localStorage.setItem('gb_cfg',JSON.stringify(c))}
 function normalizePay(row){
   return {...row, montant:Number(row.montant), createdAt:row.created_at};
+}
+function t(k){return I18N[LANG][k]||I18N.fr[k]||k}
+function setLang(lang){
+  LANG=lang;
+  localStorage.setItem(LANG_KEY,lang);
+  applyTranslations();
+}
+function applyTranslations(){
+  document.documentElement.lang=LANG;
+  const map={
+    navAdminBtn:'navAdmin',homeTitle:'homeTitle',homeSub:'homeSub',nameLabel:'nameLabel',levelTitle:'levelTitle',continueBtn:'continueBtn',
+    countTitle:'countTitle',countSub:'countSub',nbLabel:'nbLabel',startBtn:'startBtn',backBtn1:'back',matLabel:'matLabel',teacherLabel:'teacherLabel',
+    amountLabel:'amountLabel',paymentTypeLabel:'paymentType',advanceLabel:'advance',fullPaymentLabel:'fullPay',nextBtn:'next',successTitle:'successTitle',
+    successSub:'successSub',newPaymentBtn:'newPayment',adminLoginHeading:'adminLoginHeading',loginBtn:'loginBtn',backBtn2:'back',
+    dashboardSub:'dashboardSub',overviewTabBtn:'overviewTab',studentsTabBtn:'studentsTab',groupedTabBtn:'groupedTab',configTabBtn:'configTab'
+  };
+  Object.entries(map).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=t(key)});
+  const wa=document.getElementById('waLabel'); if(wa) wa.innerHTML=`${t('waLabel')} <span class="opt" id="waLabelOpt">${t('waOpt')}</span>`;
+  const dt=document.getElementById('dateLabel'); if(dt) dt.innerHTML=`${t('dateLabel')} <span class="opt" id="dateOpt">${t('dateOpt')}</span>`;
+  const f=document.getElementById('langFr'), e=document.getElementById('langEn'); if(f&&e){f.classList.toggle('active',LANG==='fr');e.classList.toggle('active',LANG==='en')}
+  const inName=document.getElementById('inName'); if(inName) inName.placeholder=LANG==='fr'?'Ex : Ngueguim Joel Henzo':'Ex: Ngueguim Joel Henzo';
+  const inWA=document.getElementById('inWA'); if(inWA) inWA.placeholder=LANG==='fr'?'Ex : +237 6XX XXX XXX':'Eg: +237 6XX XXX XXX';
+  const inNb=document.getElementById('inNb'); if(inNb) inNb.placeholder=LANG==='fr'?'Ex : 3':'Eg: 3';
+  const inAmt=document.getElementById('inAmt'); if(inAmt) inAmt.placeholder=LANG==='fr'?'Ex : 5000':'Eg: 5000';
+  const fSearch=document.getElementById('fSearch'); if(fSearch) fSearch.placeholder=t('searchStudent');
+  const gSearch=document.getElementById('gSearch'); if(gSearch) gSearch.placeholder=t('searchStudent');
+  ['fNiv','gNiv'].forEach(id=>{const sel=document.getElementById(id); if(sel&&sel.options.length){sel.options[0].text=t('allLevels')}});
+  renderGroupedStudents();
 }
 
 function normTxt(v){
@@ -660,8 +745,9 @@ async function checkPass(){
 
 async function switchTab(name,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
-  ['overview','students','config'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===name?'block':'none'});
+  ['overview','students','grouped','config'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===name?'block':'none'});
   if(name==='students')await renderTable();
+  if(name==='grouped')await renderGroupedStudents();
   if(name==='config'){renderCfgMat();renderCfgEns()}
   if(name==='overview')await renderAdmin();
 }
@@ -705,6 +791,39 @@ async function renderTable(){
   if(!all.length){body.innerHTML='';empty.style.display='block';return}
   empty.style.display='none';
   body.innerHTML=all.map(p=>{const lv=p.level.replace('Niveau ','');return`<tr><td><div class="td-name">${p.student}</div></td><td><div class="td-wa">${p.wa}</div></td><td><span class="badge b-l${lv}">${p.level}</span></td><td>${p.matiere}</td><td>${p.enseignant}</td><td><strong>${p.montant.toLocaleString()} FCFA</strong></td><td><span class="badge ${p.type==='avance'?'b-avance':'b-total'}">${p.type}</span></td><td style="color:var(--text3);font-size:.8rem">${p.date||'—'}</td><td><button class="btn-pdf" onclick="printRcpt('${p.id}')">🖨 Reçu PDF</button></td><td><button class="btn-ghost" onclick="delRow('${p.id}')">✕</button></td></tr>`}).join('')
+}
+
+async function renderGroupedStudents(){
+  const box=document.getElementById('studentGroups');
+  const empty=document.getElementById('gEmpty');
+  if(!box||!empty)return;
+  const q=(document.getElementById('gSearch')?.value||'').toLowerCase();
+  const niv=document.getElementById('gNiv')?.value||'';
+  let all=await getPays();
+  if(q)all=all.filter(p=>p.student.toLowerCase().includes(q)||p.wa.includes(q));
+  if(niv)all=all.filter(p=>p.level===niv);
+  const groups=new Map();
+  all.forEach(p=>{
+    const key=`${normTxt(p.student)}|${normTxt(p.wa)}|${normTxt(p.level)}`;
+    if(!groups.has(key))groups.set(key,{student:p.student,wa:p.wa,level:p.level,items:[],total:0});
+    const g=groups.get(key);
+    g.items.push(p);
+    g.total+=p.montant;
+  });
+  const data=[...groups.values()].sort((a,b)=>a.student.localeCompare(b.student));
+  if(!data.length){box.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  box.innerHTML=data.map(g=>`
+    <div class="student-card">
+      <h3>${g.student}</h3>
+      <div class="student-meta">${g.level} · ${g.wa}</div>
+      <div style="font-size:.82rem;font-weight:700;color:var(--text2)">${t('subjectsPaid')}</div>
+      <div class="student-subjects">
+        ${g.items.map(item=>`<div class="student-line"><span>${item.matiere} · ${item.enseignant}</span><strong>${item.montant.toLocaleString()} FCFA</strong></div>`).join('')}
+      </div>
+      <div class="student-total"><span>${t('total')}</span><span>${g.total.toLocaleString()} FCFA</span></div>
+    </div>
+  `).join('');
 }
 
 async function delRow(id){
@@ -839,6 +958,7 @@ async function clearAll(){
 // ── TOAST ──
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
 refreshLoginHelp();
+applyTranslations();
 </script>
 </body>
 </html>
