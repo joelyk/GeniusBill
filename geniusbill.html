@@ -1020,16 +1020,15 @@ async function cleanGroupedStudentDuplicates(encodedKey){
   const ordered=group.items.slice().sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
   const seen=new Set(); const ids=[];
   ordered.forEach(item=>{
-    const key=makeDuplicateKey({
-      student: normalizeStudentName(group.student),
-      wa: group.wa,
-      level: group.level,
-      matiere: item.matiere,
-      enseignant: item.enseignant,
-      montant: item.montant,
-      type: item.type,
-      date: item.date
-    });
+    // Admin grouped cleanup follows the visible card rows:
+    // same student, same subject, same teacher, same amount.
+    const key=[
+      normTxt(normalizeStudentName(group.student)),
+      canonicalPhone(group.wa)||normTxt(group.wa),
+      normTxt(item.matiere),
+      normTxt(item.enseignant),
+      Number(item.montant)||0
+    ].join('|');
     if(seen.has(key))ids.push(item.id); else seen.add(key)
   });
   if(!ids.length){toast('Aucun doublon pour cet étudiant');return}
