@@ -649,7 +649,7 @@ async function addPays(entries){
   const payload=fresh.map(({student,wa,level,matiere,enseignant,montant,type,date,createdAt,duplicate_key})=>({
     student,wa,level,matiere,enseignant,montant,type,date,created_at:createdAt,duplicate_key
   }));
-  const {error}=await sbClient.from('payments').upsert(payload,{onConflict:'duplicate_key',ignoreDuplicates:true});
+  const {error}=await sbClient.from('payments').insert(payload);
   if(error)throw error;
   return {inserted:fresh.length,ignored:entries.length-fresh.length};
 }
