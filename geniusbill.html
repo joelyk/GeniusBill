@@ -453,22 +453,14 @@ const I18N={
     nameLabel:'Nom complet',waLabel:'Numéro WhatsApp',waOpt:'(celui présent dans le groupe)',levelTitle:'Choisis ton niveau',continueBtn:'Continuer →',
     countTitle:'Combien de matières as-tu réglé ?',countSub:'Tu vas les saisir une par une ensuite.',nbLabel:'Nombre de matières',startBtn:'Démarrer la saisie →',back:'← Retour',
     matLabel:'Matière',teacherLabel:'Enseignant',amountLabel:'Montant (FCFA)',dateLabel:'Date',dateOpt:'(optionnel)',paymentType:'Type de paiement',advance:'💰 Avance',fullPay:'✅ Paiement total',next:'Suivant →',
-    successTitle:'Enregistrement réussi !',successSub:'Récapitulatif de tes paiements.',newPayment:'Nouveau paiement',
-    adminLoginHeading:'Accès Administrateur',loginBtn:'Se connecter',dashboardSub:'Gestion complète des frais de cours.',
-    overviewTab:'📊 Vue globale',studentsTab:'👥 Paiements',groupedTab:'🧾 Par étudiant',configTab:'⚙ Configuration',
-    groupedEmpty:"Aucun paiement enregistré pour l'instant.",searchStudent:'🔍 Rechercher étudiant ou WhatsApp…',allLevels:'Tous les niveaux',
-    subjectsPaid:'Matières payées',total:'TOTAL'
+    successTitle:'Enregistrement réussi !',successSub:'Récapitulatif de tes paiements.',newPayment:'Nouveau paiement'
   },
   en:{
     navAdmin:'⚙ Admin',homeTitle:'Record your course fees 📚',homeSub:'Fill in your details, then enter your payments subject by subject.',
     nameLabel:'Full name',waLabel:'WhatsApp number',waOpt:'(the one used in the group)',levelTitle:'Choose your level',continueBtn:'Continue →',
     countTitle:'How many subjects have you paid for?',countSub:'You will enter them one by one next.',nbLabel:'Number of subjects',startBtn:'Start entry →',back:'← Back',
     matLabel:'Subject',teacherLabel:'Teacher',amountLabel:'Amount (FCFA)',dateLabel:'Date',dateOpt:'(optional)',paymentType:'Payment type',advance:'💰 Deposit',fullPay:'✅ Full payment',next:'Next →',
-    successTitle:'Payment recorded!',successSub:'Summary of your payments.',newPayment:'New payment',
-    adminLoginHeading:'Administrator Access',loginBtn:'Sign in',dashboardSub:'Complete course-fee management.',
-    overviewTab:'📊 Overview',studentsTab:'👥 Payments',groupedTab:'🧾 By student',configTab:'⚙ Settings',
-    groupedEmpty:'No payments recorded yet.',searchStudent:'🔍 Search student or WhatsApp…',allLevels:'All levels',
-    subjectsPaid:'Paid subjects',total:'TOTAL'
+    successTitle:'Payment recorded!',successSub:'Summary of your payments.',newPayment:'New payment'
   }
 };
 const createSupabaseClient =
@@ -503,8 +495,7 @@ function applyTranslations(){
     navAdminBtn:'navAdmin',homeTitle:'homeTitle',homeSub:'homeSub',nameLabel:'nameLabel',levelTitle:'levelTitle',continueBtn:'continueBtn',
     countTitle:'countTitle',countSub:'countSub',nbLabel:'nbLabel',startBtn:'startBtn',backBtn1:'back',matLabel:'matLabel',teacherLabel:'teacherLabel',
     amountLabel:'amountLabel',paymentTypeLabel:'paymentType',advanceLabel:'advance',fullPaymentLabel:'fullPay',nextBtn:'next',successTitle:'successTitle',
-    successSub:'successSub',newPaymentBtn:'newPayment',adminLoginHeading:'adminLoginHeading',loginBtn:'loginBtn',backBtn2:'back',
-    dashboardSub:'dashboardSub',overviewTabBtn:'overviewTab',studentsTabBtn:'studentsTab',groupedTabBtn:'groupedTab',configTabBtn:'configTab'
+    successSub:'successSub',newPaymentBtn:'newPayment'
   };
   Object.entries(map).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=t(key)});
   const wa=document.getElementById('waLabel'); if(wa) wa.innerHTML=`${t('waLabel')} <span class="opt" id="waLabelOpt">${t('waOpt')}</span>`;
@@ -514,10 +505,6 @@ function applyTranslations(){
   const inWA=document.getElementById('inWA'); if(inWA) inWA.placeholder=LANG==='fr'?'Ex : +237 6XX XXX XXX':'Eg: +237 6XX XXX XXX';
   const inNb=document.getElementById('inNb'); if(inNb) inNb.placeholder=LANG==='fr'?'Ex : 3':'Eg: 3';
   const inAmt=document.getElementById('inAmt'); if(inAmt) inAmt.placeholder=LANG==='fr'?'Ex : 5000':'Eg: 5000';
-  const fSearch=document.getElementById('fSearch'); if(fSearch) fSearch.placeholder=t('searchStudent');
-  const gSearch=document.getElementById('gSearch'); if(gSearch) gSearch.placeholder=t('searchStudent');
-  ['fNiv','gNiv'].forEach(id=>{const sel=document.getElementById(id); if(sel&&sel.options.length){sel.options[0].text=t('allLevels')}});
-  renderGroupedStudents();
 }
 
 function normTxt(v){
@@ -817,11 +804,11 @@ async function renderGroupedStudents(){
     <div class="student-card">
       <h3>${g.student}</h3>
       <div class="student-meta">${g.level} · ${g.wa}</div>
-      <div style="font-size:.82rem;font-weight:700;color:var(--text2)">${t('subjectsPaid')}</div>
+      <div style="font-size:.82rem;font-weight:700;color:var(--text2)">Matières payées</div>
       <div class="student-subjects">
         ${g.items.map(item=>`<div class="student-line"><span>${item.matiere} · ${item.enseignant}</span><strong>${item.montant.toLocaleString()} FCFA</strong></div>`).join('')}
       </div>
-      <div class="student-total"><span>${t('total')}</span><span>${g.total.toLocaleString()} FCFA</span></div>
+      <div class="student-total"><span>TOTAL</span><span>${g.total.toLocaleString()} FCFA</span></div>
     </div>
   `).join('');
 }
