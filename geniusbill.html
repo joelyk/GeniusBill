@@ -412,13 +412,18 @@ const DEFAULTS = {
 const SUPABASE_URL = window.GB_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = window.GB_SUPABASE_ANON_KEY || '';
 const SUPABASE_ADMIN_EMAIL = window.GB_SUPABASE_ADMIN_EMAIL || '';
+const createSupabaseClient =
+  window.supabase?.createClient ||
+  window.supabase?.default?.createClient ||
+  window.createClient ||
+  null;
 const HAS_REAL_SUPABASE_CONFIG =
   SUPABASE_URL && SUPABASE_ANON_KEY &&
   !SUPABASE_URL.includes('YOUR_') &&
   !SUPABASE_ANON_KEY.includes('YOUR_');
 
-const supabase = HAS_REAL_SUPABASE_CONFIG
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const supabase = HAS_REAL_SUPABASE_CONFIG && createSupabaseClient
+  ? createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
 // ── STORAGE ──
@@ -430,7 +435,7 @@ function normalizePay(row){
 
 function requireSupabase(){
   if(supabase)return true;
-  toast('⚠ Configure Supabase dans supabase-config.js');
+  toast('⚠ Supabase non chargé ou mal configuré');
   return false;
 }
 
@@ -477,6 +482,10 @@ async function isAdminAuthenticated(){
 function refreshLoginHelp(){
   const el=document.getElementById('loginHelp');
   if(!el)return;
+  if(!createSupabaseClient){
+    el.textContent="Le client Supabase ne s'est pas chargé. Recharge la page.";
+    return;
+  }
   if(!HAS_REAL_SUPABASE_CONFIG){
     el.textContent="Configure d'abord Supabase dans supabase-config.js.";
     return;
