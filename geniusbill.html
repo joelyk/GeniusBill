@@ -422,7 +422,7 @@ const HAS_REAL_SUPABASE_CONFIG =
   !SUPABASE_URL.includes('YOUR_') &&
   !SUPABASE_ANON_KEY.includes('YOUR_');
 
-const supabase = HAS_REAL_SUPABASE_CONFIG && createSupabaseClient
+const sbClient = HAS_REAL_SUPABASE_CONFIG && createSupabaseClient
   ? createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
@@ -434,14 +434,14 @@ function normalizePay(row){
 }
 
 function requireSupabase(){
-  if(supabase)return true;
+  if(sbClient)return true;
   toast('⚠ Supabase non chargé ou mal configuré');
   return false;
 }
 
 async function getPays(){
   if(!requireSupabase())return [];
-  const {data,error}=await supabase.from('payments').select('*').order('created_at',{ascending:false});
+  const {data,error}=await sbClient.from('payments').select('*').order('created_at',{ascending:false});
   if(error){console.error(error);toast('❌ Impossible de charger les paiements');return []}
   return (data||[]).map(normalizePay);
 }
@@ -451,27 +451,27 @@ async function addPays(entries){
   const payload=entries.map(({student,wa,level,matiere,enseignant,montant,type,date,createdAt})=>({
     student,wa,level,matiere,enseignant,montant,type,date,created_at:createdAt
   }));
-  const {error}=await supabase.from('payments').insert(payload);
+  const {error}=await sbClient.from('payments').insert(payload);
   if(error)throw error;
 }
 
 async function delPay(id){
   if(!requireSupabase())return false;
-  const {error}=await supabase.from('payments').delete().eq('id',id);
+  const {error}=await sbClient.from('payments').delete().eq('id',id);
   if(error){console.error(error);toast('❌ Suppression impossible');return false}
   return true;
 }
 
 async function clearPays(){
   if(!requireSupabase())return false;
-  const {error}=await supabase.from('payments').delete().not('id','is',null);
+  const {error}=await sbClient.from('payments').delete().not('id','is',null);
   if(error){console.error(error);toast('❌ Effacement impossible');return false}
   return true;
 }
 
 async function getSession(){
-  if(!supabase)return null;
-  const {data:{session}}=await supabase.auth.getSession();
+  if(!sbClient)return null;
+  const {data:{session}}=await sbClient.auth.getSession();
   return session;
 }
 
@@ -595,7 +595,7 @@ async function checkPass(){
   const pass=input.value.trim();
   if(!email){toast('⚠ Entre l’email admin');return}
   if(!pass){toast('⚠ Entre le mot de passe');return}
-  const {error}=await supabase.auth.signInWithPassword({email,password:pass});
+  const {error}=await sbClient.auth.signInWithPassword({email,password:pass});
   if(error){console.error(error);toast('❌ Connexion admin impossible');return}
   document.getElementById('inEmail').value='';
   input.value='';
@@ -739,8 +739,8 @@ function addEns(){const val=document.getElementById('cfgEnsNew').value.trim();if
 function rmEns(i){const cfg=getCfg();const niv=document.getElementById('cfgEnsNiv').value;cfg.enseignants[niv].splice(i,1);saveCfg(cfg);renderCfgEns()}
 
 async function logoutAdmin(){
-  if(!supabase){show('s-home');return}
-  await supabase.auth.signOut();
+  if(!sbClient){show('s-home');return}
+  await sbClient.auth.signOut();
   show('s-home');
   toast('Session admin fermée');
 }
