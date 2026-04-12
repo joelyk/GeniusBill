@@ -279,7 +279,7 @@ tr:hover td{background:var(--primary-light)}
     <div class="pass-box">
       <div style="font-size:2.8rem;margin-bottom:.9rem">🔒</div>
       <h2>Accès Administrateur</h2>
-      <p class="sub" id="loginHelp">Réservé à l'équipe de gestion.</p>
+      <p class="sub" id="loginHelp">Accès réservé à l'équipe de gestion.</p>
       <input id="inPass" type="password" placeholder="Mot de passe"
              onkeydown="if(event.key==='Enter')checkPass()"/>
       <button class="btn" onclick="checkPass()">Entrer</button>
@@ -373,11 +373,12 @@ tr:hover td{background:var(--primary-light)}
       </div>
       <div class="card">
         <h2>🔑 Mot de passe admin</h2>
+        <p class="sub">Mot de passe fixe configuré dans l'application.</p>
         <div class="row2">
-          <div class="field"><label>Nouveau</label><input id="np1" type="password" placeholder="••••••"/></div>
-          <div class="field"><label>Confirmer</label><input id="np2" type="password" placeholder="••••••"/></div>
+          <div class="field"><label>Nouveau</label><input id="np1" type="password" placeholder="Indisponible" disabled/></div>
+          <div class="field"><label>Confirmer</label><input id="np2" type="password" placeholder="Indisponible" disabled/></div>
         </div>
-        <button class="btn" style="max-width:200px" onclick="changePass()">Enregistrer</button>
+        <button class="btn" style="max-width:200px" onclick="changePass()">Modifier</button>
       </div>
       <div class="card dz">
         <h2>⚠ Zone danger</h2>
@@ -396,7 +397,7 @@ tr:hover td{background:var(--primary-light)}
 <script>
 // ── DEFAULT CONFIG ──
 const DEFAULTS = {
-  adminPasswordHash: null,
+  adminPasswordHash: "a6761ccff1191f3ee53acada4f7965241538511ef6eb52d37974507ab5a9023e",
   matieres: {
     "1": ["Haskell","C++","Système d'exploitation","Réseau"],
     "2": ["Génie logiciel","Système d'information","Programmation web","Théorie des marchés","Électronique numérique 2"],
@@ -421,17 +422,10 @@ async function sha256(txt){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-function hasAdminPassword(){
-  const cfg=getCfg();
-  return !!cfg.adminPasswordHash || !!cfg.password;
-}
-
 function refreshLoginHelp(){
   const el=document.getElementById('loginHelp');
   if(!el)return;
-  el.textContent=hasAdminPassword()
-    ? "Réservé à l'équipe de gestion."
-    : "Premier accès : crée ton mot de passe administrateur.";
+  el.textContent="Accès réservé à l'équipe de gestion.";
 }
 
 // ── STATE ──
@@ -512,34 +506,12 @@ function newSession(){
 }
 
 // ── ADMIN ──
-async function ensurePasswordMigrated(cfg, plain){
-  if(cfg.adminPasswordHash)return cfg;
-  if(cfg.password && plain===cfg.password){
-    cfg.adminPasswordHash=await sha256(plain);
-    delete cfg.password;
-    saveCfg(cfg);
-  }
-  return cfg;
-}
-
 async function checkPass(){
   const input=document.getElementById('inPass');
   const pass=input.value.trim();
   if(!pass){toast('⚠ Entre un mot de passe');return}
-  const cfg=getCfg();
-  if(!hasAdminPassword()){
-    cfg.adminPasswordHash=await sha256(pass);
-    saveCfg(cfg);
-    input.value='';
-    refreshLoginHelp();
-    show('s-admin');
-    renderAdmin();
-    toast('Mot de passe administrateur créé ✓');
-    return;
-  }
-  await ensurePasswordMigrated(cfg, pass);
   const hash=await sha256(pass);
-  if(hash===getCfg().adminPasswordHash){
+  if(hash===DEFAULTS.adminPasswordHash){
     input.value='';show('s-admin');renderAdmin()
   }else{toast('❌ Mot de passe incorrect')}
 }
@@ -671,12 +643,7 @@ function addEns(){const val=document.getElementById('cfgEnsNew').value.trim();if
 function rmEns(i){const cfg=getCfg();const niv=document.getElementById('cfgEnsNiv').value;cfg.enseignants[niv].splice(i,1);saveCfg(cfg);renderCfgEns()}
 
 async function changePass(){
-  const p1=document.getElementById('np1').value;const p2=document.getElementById('np2').value;
-  if(!p1){toast('⚠ Entre un mot de passe');return}
-  if(p1!==p2){toast('⚠ Les mots de passe ne correspondent pas');return}
-  const cfg=getCfg();cfg.adminPasswordHash=await sha256(p1);delete cfg.password;saveCfg(cfg);
-  document.getElementById('np1').value='';document.getElementById('np2').value='';
-  toast('Mot de passe mis à jour ✓')
+  toast('Mot de passe admin fixe: modification désactivée')
 }
 
 function clearAll(){
