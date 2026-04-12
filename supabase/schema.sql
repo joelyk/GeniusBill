@@ -27,11 +27,11 @@ create policy "admin can read payments"
 on public.payments
 for select
 to authenticated
-using (auth.jwt() ->> 'email' = 'YOUR_ADMIN_EMAIL');
+using (auth.jwt() ->> 'email' = 'nkilitech@gmail.com');
 
 drop policy if exists "admin can delete payments" on public.payments;
 create policy "admin can delete payments"
 on public.payments
 for delete
 to authenticated
-using (auth.jwt() ->> 'email' = 'YOUR_ADMIN_EMAIL');
+using (auth.jwt() ->> 'email' = 'nkilitech@gmail.com');
