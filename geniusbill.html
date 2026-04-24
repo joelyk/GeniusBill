@@ -1219,20 +1219,12 @@ async function clearAll(){
 function openPdfWindow(title, subtitle, rows, total, profMode){
   const win=window.open('','_blank','width=900,height=980');
   const dateStr=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
-  const colSpanTotal=profMode?5:7;
-  const theadCols=profMode
-    ?`<th>#</th><th>Étudiant</th><th>Niveau</th><th>Matière</th><th>Enseignant</th>`
-    :`<th>#</th><th>Étudiant</th><th>Niveau</th><th>Matière</th><th>Enseignant</th><th>Type</th><th>Date</th><th style="text-align:right">Montant</th>`;
-  const tbodyRows=rows.map((p,i)=>{
-    if(profMode){
-      return `<tr><td style="color:#94a3b8">${i+1}</td><td><strong>Étudiant ${i+1}</strong></td><td>${p.level}</td><td>${p.matiere}</td><td>${p.enseignant}</td></tr>`;
-    }
-    return `<tr><td style="color:#94a3b8">${i+1}</td><td><strong>${p.student}</strong><div style="font-size:.75rem;color:#94a3b8">${p.wa}</div></td><td>${p.level}</td><td>${p.matiere}</td><td>${p.enseignant}</td><td><span class="bdg ${p.type==='avance'?'ba':'bt'}">${p.type==='avance'?'Avance':'Total'}</span></td><td style="color:#94a3b8;font-size:.8rem">${p.date||'—'}</td><td style="text-align:right;font-weight:600">${p.montant.toLocaleString()} FCFA</td></tr>`;
-  }).join('');
-  const totalRow=profMode
-    ?`<tr class="trow"><td colspan="${colSpanTotal-1}">TOTAL</td><td style="text-align:right">${total.toLocaleString()} FCFA</td></tr>`
-    :`<tr class="trow"><td colspan="7">TOTAL</td><td style="text-align:right">${total.toLocaleString()} FCFA</td></tr>`;
-  const profBanner=profMode?`<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:.8rem;color:#92400e;font-weight:600">👨‍🏫 Version professeur — Identités anonymisées · Montants individuels masqués</div>`:'';
+  const theadCols=`<th>#</th><th>Étudiant</th><th>Niveau</th><th>Matière</th><th>Enseignant</th><th>Type</th><th>Date</th><th style="text-align:right">Montant</th>`;
+  const tbodyRows=rows.map((p,i)=>`<tr><td style="color:#94a3b8">${i+1}</td><td><strong>${p.student}</strong><div style="font-size:.75rem;color:#94a3b8">${p.wa}</div></td><td>${p.level}</td><td>${p.matiere}</td><td>${p.enseignant}</td><td><span class="bdg ${p.type==='avance'?'ba':'bt'}">${p.type==='avance'?'Avance':'Total'}</span></td><td style="color:#94a3b8;font-size:.8rem">${p.date||'—'}</td><td style="text-align:right;font-weight:600">${p.montant.toLocaleString()} FCFA</td></tr>`).join('');
+  const totalRow=profMode?`<tr class="trow"><td colspan="7">TOTAL</td><td style="text-align:right">${total.toLocaleString()} FCFA</td></tr>`:'';
+  const totalBox=profMode?`<div class="sbox"><div class="lbl">Montant total</div><div class="val val-green">${total.toLocaleString()} FCFA</div></div>`:'';
+  const profBanner=profMode?`<div style="background:#eff4ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:.8rem;color:#1e40af;font-weight:600">👨‍🏫 Version professeur — Toutes les données visibles</div>`
+    :`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:.8rem;color:#166534;font-weight:600">🔒 Version anonyme — Montant total masqué</div>`;
   win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>
   <title>${title}</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"/>
@@ -1275,13 +1267,13 @@ function openPdfWindow(title, subtitle, rows, total, profMode){
     <div class="summary">
       <div class="sbox"><div class="lbl">Paiements</div><div class="val val-blue">${rows.length}</div></div>
       <div class="sbox"><div class="lbl">Étudiants distincts</div><div class="val">${new Set(rows.map(r=>r.student)).size}</div></div>
-      <div class="sbox"><div class="lbl">Montant total</div><div class="val val-green">${total.toLocaleString()} FCFA</div></div>
+      ${totalBox}
     </div>
     <table>
       <thead><tr>${theadCols}</tr></thead>
       <tbody>${tbodyRows}${totalRow}</tbody>
     </table>
-    <div class="foot">Document généré automatiquement par GeniusBill · Système de gestion des frais de cours</div>
+    <div class="foot">Document généré automatiquement par GeniusBill · Système de gestion des frais de cours — du Groupe Genius Répétition — Par Mr Joël Yankam</div>
   </div>
   <script>window.onload=function(){window.print()}<\/script>
   </body></html>`);
