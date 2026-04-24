@@ -505,6 +505,29 @@ tr:hover td{background:var(--primary-light)}
   </div>
 </div>
 
+<div id="editPayModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:#fff;border-radius:16px;padding:1.5rem;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+    <h2 style="margin-bottom:1rem;font-size:1.05rem">✏ Modifier le paiement</h2>
+    <div class="field"><label>Matière</label><select id="editPayMat"></select></div>
+    <div class="field"><label>Enseignant</label><select id="editPayEns"></select></div>
+    <div class="row2">
+      <div class="field"><label>Montant (FCFA)</label><input id="editPayAmt" type="number" min="0"/></div>
+      <div class="field"><label>Date <span class="opt">(optionnel)</span></label><input id="editPayDate" type="date"/></div>
+    </div>
+    <div class="field">
+      <label>Type de paiement</label>
+      <div class="tog-wrap">
+        <input type="radio" name="editPt" id="editPtA" value="avance" checked/><label for="editPtA">💰 Avance</label>
+        <input type="radio" name="editPt" id="editPtT" value="total"/><label for="editPtT">✅ Total</label>
+      </div>
+    </div>
+    <div class="row2" style="margin-top:1.1rem">
+      <button class="btn-outline" onclick="closeEditPayModal()">Annuler</button>
+      <button class="btn" onclick="saveEditPay()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -751,19 +774,113 @@ async function renderStudentSpace(){
   const box=document.getElementById('studentOwnPayments');
   const empty=document.getElementById('studentOwnEmpty');
   if(!profile||!profileCard||!box||!empty)return;
-  profileCard.innerHTML=`<strong>${profile.name}</strong><div style="color:var(--text3);font-size:.84rem;margin-top:.25rem">${profile.wa} · ${profile.level}</div>`;
+  profileCard.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
+      <div>
+        <strong>${profile.name}</strong>
+        <div style="color:var(--text3);font-size:.84rem;margin-top:.25rem">${profile.wa} · ${profile.level}</div>
+      </div>
+      <button class="btn-outline btn-sm" onclick="toggleProfileEdit()">✏ Modifier le profil</button>
+    </div>
+    <div id="profileEditForm" style="display:none;margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
+      <div class="field"><label>Nom complet</label><input id="editProfName" value="${profile.name}"/></div>
+      <div class="field"><label>WhatsApp</label><input id="editProfWA" value="${profile.wa}"/></div>
+      <div class="field">
+        <label>Niveau</label>
+        <select id="editProfLevel">
+          <option${profile.level==='Niveau 1'?' selected':''}>Niveau 1</option>
+          <option${profile.level==='Niveau 2'?' selected':''}>Niveau 2</option>
+          <option${profile.level==='Niveau 3'?' selected':''}>Niveau 3</option>
+        </select>
+      </div>
+      <div class="row2">
+        <button class="btn-outline" onclick="toggleProfileEdit()">Annuler</button>
+        <button class="btn" onclick="saveProfileEdit()">Enregistrer</button>
+      </div>
+    </div>
+  `;
   const all=await getPays();
   const own=all.filter(p=>normTxt(normalizeStudentName(p.student))===normTxt(profile.name) && (canonicalPhone(p.wa)||normTxt(p.wa))===(canonicalPhone(profile.wa)||normTxt(profile.wa)));
+  window.__studentOwnPays=own;
   if(!own.length){box.innerHTML='';empty.style.display='block';return}
   empty.style.display='none';
   const total=own.reduce((sum,p)=>sum+p.montant,0);
   box.innerHTML=`
     <div class="rcpt-wrap">
-      ${own.map(p=>`<div class="rcpt-row"><span class="rcpt-lbl">${p.matiere} · ${p.enseignant}</span><strong>${p.montant.toLocaleString()} FCFA</strong></div>`).join('')}
+      ${own.map(p=>`
+        <div class="rcpt-row">
+          <span class="rcpt-lbl">${p.matiere} · ${p.enseignant}</span>
+          <span style="display:flex;align-items:center;gap:.5rem">
+            <strong>${p.montant.toLocaleString()} FCFA</strong>
+            <button class="btn-outline btn-sm" onclick="openEditPayModal('${p.id}')">✏</button>
+          </span>
+        </div>
+      `).join('')}
       <div class="rcpt-row"><span>TOTAL</span><span>${total.toLocaleString()} FCFA</span></div>
     </div>
   `;
 }
+function toggleProfileEdit(){
+  const form=document.getElementById('profileEditForm');
+  if(form)form.style.display=form.style.display==='none'?'block':'none';
+}
+
+async function saveProfileEdit(){
+  const name=normalizeStudentName(document.getElementById('editProfName').value);
+  const waRaw=document.getElementById('editProfWA').value.trim();
+  const canon=canonicalPhone(waRaw);
+  const level=document.getElementById('editProfLevel').value;
+  if(!name){toast('⚠ Entre ton nom complet');return}
+  if(!canon){toast('⚠ Entre un numéro WhatsApp valide');return}
+  saveStudentProfile({name,wa:formatPhone(waRaw),level});
+  toast('Profil mis à jour ✓');
+  await renderStudentSpace();
+}
+
+let __editingPayId=null;
+
+function openEditPayModal(payId){
+  const pay=(window.__studentOwnPays||[]).find(p=>p.id===payId);
+  if(!pay)return;
+  __editingPayId=payId;
+  const cfg=getCfg();
+  const lvlNum=Number(String(pay.level).replace(/\D/g,''));
+  const mats=cfg.matieres[String(lvlNum)]||[];
+  const enss=cfg.enseignants[String(lvlNum)]||[];
+  const sm=document.getElementById('editPayMat');
+  sm.innerHTML=mats.map(m=>`<option${m===pay.matiere?' selected':''}>${m}</option>`).join('');
+  const se=document.getElementById('editPayEns');
+  se.innerHTML=enss.map(e=>`<option${e===pay.enseignant?' selected':''}>${e}</option>`).join('');
+  document.getElementById('editPayAmt').value=pay.montant;
+  document.getElementById('editPayDate').value=pay.date||'';
+  document.getElementById(pay.type==='avance'?'editPtA':'editPtT').checked=true;
+  document.getElementById('editPayModal').style.display='flex';
+}
+
+function closeEditPayModal(){
+  document.getElementById('editPayModal').style.display='none';
+  __editingPayId=null;
+}
+
+async function saveEditPay(){
+  const pay=(window.__studentOwnPays||[]).find(p=>p.id===__editingPayId);
+  if(!pay)return;
+  const mat=document.getElementById('editPayMat').value;
+  const ens=document.getElementById('editPayEns').value;
+  const amt=parseInt(document.getElementById('editPayAmt').value);
+  const date=document.getElementById('editPayDate').value||null;
+  const type=document.querySelector('input[name="editPt"]:checked').value;
+  if(!amt||amt<0){toast('⚠ Montant invalide');return}
+  const updated={...pay,matiere:mat,enseignant:ens,montant:amt,date,type};
+  const dupKey=makeDuplicateKey(updated);
+  if(!requireSupabase())return;
+  const {error}=await sbClient.from('payments').update({matiere:mat,enseignant:ens,montant:amt,date,type,duplicate_key:dupKey}).eq('id',__editingPayId);
+  if(error){console.error(error);toast('❌ Modification impossible');return}
+  toast('Paiement modifié ✓');
+  closeEditPayModal();
+  await renderStudentSpace();
+}
+
 function startPaymentForProfile(){
   const profile=getStudentProfile();
   if(!profile){newSession();return}
