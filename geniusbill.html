@@ -394,6 +394,28 @@ tr:hover td{background:var(--primary-light)}
           <canvas id="chartEns" height="230"></canvas>
         </div>
       </div>
+      <div class="card" style="margin-top:1rem">
+        <h2>⬇ Téléchargements CSV</h2>
+        <div class="row2">
+          <div class="field">
+            <label>Par niveau</label>
+            <div class="add-row" style="margin-top:0">
+              <select id="dlNiv" style="flex:1">
+                <option value="">Tous les niveaux</option>
+                <option>Niveau 1</option><option>Niveau 2</option><option>Niveau 3</option>
+              </select>
+              <button class="btn btn-sm" onclick="downloadByLevel()">⬇ PDF</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Par matière payée</label>
+            <div class="add-row" style="margin-top:0">
+              <select id="dlMat" style="flex:1"><option value="">Toutes les matières</option></select>
+              <button class="btn btn-sm" onclick="downloadByMatiere()">⬇ PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- STUDENTS -->
@@ -933,6 +955,9 @@ async function renderAdmin(){
   const all=await getPays();
   renderStats(all);
   renderCharts(all);
+  const mats=[...new Set(all.map(p=>p.matiere))].sort((a,b)=>a.localeCompare(b));
+  const dlMat=document.getElementById('dlMat');
+  if(dlMat)dlMat.innerHTML='<option value="">Toutes les matières</option>'+mats.map(m=>`<option>${m}</option>`).join('');
 }
 
 function renderStats(all){
@@ -963,6 +988,7 @@ async function renderTable(){
   let all=await getPays();
   if(q)all=all.filter(p=>p.student.toLowerCase().includes(q)||p.wa.includes(q));
   if(niv)all=all.filter(p=>p.level===niv);
+  all.sort((a,b)=>a.student.localeCompare(b.student));
   const body=document.getElementById('tBody');
   const empty=document.getElementById('tEmpty');
   if(!all.length){body.innerHTML='';empty.style.display='block';return}
@@ -1184,6 +1210,91 @@ async function clearAll(){
     await renderTable();
     toast('Données effacées');
   }
+}
+
+// ── DOWNLOADS PDF ──
+function openPdfWindow(title, subtitle, rows, total){
+  const win=window.open('','_blank','width=900,height=980');
+  const dateStr=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>
+  <title>${title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:#1e293b;padding:0}
+    .page{max-width:820px;margin:0 auto;padding:40px 36px}
+    .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:18px;border-bottom:3px solid #2563eb}
+    .logo{font-size:1.3rem;font-weight:800;color:#2563eb}.logo span{color:#1e293b}
+    .htitle{font-size:.95rem;font-weight:700;color:#1e293b;margin-top:6px}
+    .hsub{font-size:.78rem;color:#64748b;margin-top:3px}
+    .meta{text-align:right;font-size:.8rem;color:#94a3b8}
+    .meta strong{color:#1e293b;display:block;font-size:.95rem}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    thead tr{background:#f4f6fb}
+    th{padding:10px 12px;text-align:left;font-size:.72rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+    td{padding:9px 12px;border-bottom:1px solid #e2e6f0;font-size:.85rem}
+    tr:nth-child(even) td{background:#f8fafc}
+    .trow td{font-weight:800;font-size:.92rem;background:#eff4ff;color:#2563eb;border:none;border-top:2px solid #2563eb}
+    .bdg{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.7rem;font-weight:600}
+    .ba{background:#fffbeb;color:#d97706}.bt{background:#f0fdf4;color:#16a34a}
+    .foot{margin-top:28px;padding-top:12px;border-top:1px solid #e2e6f0;text-align:center;color:#94a3b8;font-size:.74rem}
+    .summary{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+    .sbox{background:#f4f6fb;border-radius:9px;padding:10px 16px;flex:1;min-width:120px}
+    .sbox .lbl{font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}
+    .sbox .val{font-size:1.15rem;font-weight:800;margin-top:2px}
+    .val-blue{color:#2563eb}.val-green{color:#16a34a}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <div class="page">
+    <div class="hdr">
+      <div>
+        <div class="logo">Genius<span>Bill</span></div>
+        <div class="htitle">${title}</div>
+        <div class="hsub">${subtitle}</div>
+      </div>
+      <div class="meta">Généré le<strong>${dateStr}</strong></div>
+    </div>
+    <div class="summary">
+      <div class="sbox"><div class="lbl">Paiements</div><div class="val val-blue">${rows.length}</div></div>
+      <div class="sbox"><div class="lbl">Étudiants distincts</div><div class="val">${new Set(rows.map(r=>r.student)).size}</div></div>
+      <div class="sbox"><div class="lbl">Montant total</div><div class="val val-green">${total.toLocaleString()} FCFA</div></div>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Étudiant</th><th>Niveau</th><th>Matière</th><th>Enseignant</th><th>Type</th><th>Date</th><th style="text-align:right">Montant</th></tr></thead>
+      <tbody>
+        ${rows.map((p,i)=>`<tr><td style="color:#94a3b8">${i+1}</td><td><strong>${p.student}</strong><div style="font-size:.75rem;color:#94a3b8">${p.wa}</div></td><td>${p.level}</td><td>${p.matiere}</td><td>${p.enseignant}</td><td><span class="bdg ${p.type==='avance'?'ba':'bt'}">${p.type==='avance'?'Avance':'Total'}</span></td><td style="color:#94a3b8;font-size:.8rem">${p.date||'—'}</td><td style="text-align:right;font-weight:600">${p.montant.toLocaleString()} FCFA</td></tr>`).join('')}
+        <tr class="trow"><td colspan="7">TOTAL</td><td style="text-align:right">${total.toLocaleString()} FCFA</td></tr>
+      </tbody>
+    </table>
+    <div class="foot">Document généré automatiquement par GeniusBill · Système de gestion des frais de cours</div>
+  </div>
+  <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`);
+  win.document.close();
+}
+
+async function downloadByLevel(){
+  const niv=document.getElementById('dlNiv').value;
+  let all=await getPays();
+  if(niv)all=all.filter(p=>p.level===niv);
+  if(!all.length){toast('⚠ Aucun paiement pour ce niveau');return}
+  all.sort((a,b)=>a.student.localeCompare(b.student));
+  const total=all.reduce((s,p)=>s+p.montant,0);
+  const title=niv?`Paiements — ${niv}`:'Paiements — Tous les niveaux';
+  openPdfWindow(title,`${all.length} paiement(s) · Trié par ordre alphabétique`,all,total);
+  toast(`⬇ PDF généré — Total : ${total.toLocaleString()} FCFA`);
+}
+
+async function downloadByMatiere(){
+  const mat=document.getElementById('dlMat').value;
+  let all=await getPays();
+  if(mat)all=all.filter(p=>p.matiere===mat);
+  if(!all.length){toast('⚠ Aucun paiement pour cette matière');return}
+  all.sort((a,b)=>a.student.localeCompare(b.student));
+  const total=all.reduce((s,p)=>s+p.montant,0);
+  const title=mat?`Paiements — ${mat}`:'Paiements — Toutes les matières';
+  openPdfWindow(title,`${all.length} paiement(s) · Trié par ordre alphabétique`,all,total);
+  toast(`⬇ PDF généré — Total : ${total.toLocaleString()} FCFA`);
 }
 
 // ── TOAST ──
