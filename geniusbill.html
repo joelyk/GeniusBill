@@ -395,8 +395,8 @@ tr:hover td{background:var(--primary-light)}
         </div>
       </div>
       <div class="card" style="margin-top:1rem">
-        <h2>⬇ Téléchargements CSV</h2>
-        <div class="row2">
+        <h2>⬇ Téléchargements PDF</h2>
+        <div class="row2" style="margin-bottom:.85rem">
           <div class="field">
             <label>Par niveau</label>
             <div class="add-row" style="margin-top:0">
@@ -404,17 +404,20 @@ tr:hover td{background:var(--primary-light)}
                 <option value="">Tous les niveaux</option>
                 <option>Niveau 1</option><option>Niveau 2</option><option>Niveau 3</option>
               </select>
-              <button class="btn btn-sm" onclick="downloadByLevel()">⬇ PDF</button>
+              <button class="btn btn-sm" onclick="downloadByLevel(false)" title="PDF complet">⬇ PDF</button>
+              <button class="btn btn-sm" style="background:var(--amber);white-space:nowrap" onclick="downloadByLevel(true)" title="PDF anonyme sans montants individuels">👨‍🏫 Prof</button>
             </div>
           </div>
           <div class="field">
             <label>Par matière payée</label>
             <div class="add-row" style="margin-top:0">
               <select id="dlMat" style="flex:1"><option value="">Toutes les matières</option></select>
-              <button class="btn btn-sm" onclick="downloadByMatiere()">⬇ PDF</button>
+              <button class="btn btn-sm" onclick="downloadByMatiere(false)" title="PDF complet">⬇ PDF</button>
+              <button class="btn btn-sm" style="background:var(--amber);white-space:nowrap" onclick="downloadByMatiere(true)" title="PDF anonyme sans montants individuels">👨‍🏫 Prof</button>
             </div>
           </div>
         </div>
+        <div style="font-size:.78rem;color:var(--text3)">👨‍🏫 Version prof : noms anonymes, WhatsApp masqués, montants individuels cachés — seul le total apparaît.</div>
       </div>
     </div>
 
@@ -1213,9 +1216,23 @@ async function clearAll(){
 }
 
 // ── DOWNLOADS PDF ──
-function openPdfWindow(title, subtitle, rows, total){
+function openPdfWindow(title, subtitle, rows, total, profMode){
   const win=window.open('','_blank','width=900,height=980');
   const dateStr=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  const colSpanTotal=profMode?5:7;
+  const theadCols=profMode
+    ?`<th>#</th><th>Étudiant</th><th>Niveau</th><th>Matière</th><th>Enseignant</th>`
+    :`<th>#</th><th>Étudiant</th><th>Niveau</th><th>Matière</th><th>Enseignant</th><th>Type</th><th>Date</th><th style="text-align:right">Montant</th>`;
+  const tbodyRows=rows.map((p,i)=>{
+    if(profMode){
+      return `<tr><td style="color:#94a3b8">${i+1}</td><td><strong>Étudiant ${i+1}</strong></td><td>${p.level}</td><td>${p.matiere}</td><td>${p.enseignant}</td></tr>`;
+    }
+    return `<tr><td style="color:#94a3b8">${i+1}</td><td><strong>${p.student}</strong><div style="font-size:.75rem;color:#94a3b8">${p.wa}</div></td><td>${p.level}</td><td>${p.matiere}</td><td>${p.enseignant}</td><td><span class="bdg ${p.type==='avance'?'ba':'bt'}">${p.type==='avance'?'Avance':'Total'}</span></td><td style="color:#94a3b8;font-size:.8rem">${p.date||'—'}</td><td style="text-align:right;font-weight:600">${p.montant.toLocaleString()} FCFA</td></tr>`;
+  }).join('');
+  const totalRow=profMode
+    ?`<tr class="trow"><td colspan="${colSpanTotal-1}">TOTAL</td><td style="text-align:right">${total.toLocaleString()} FCFA</td></tr>`
+    :`<tr class="trow"><td colspan="7">TOTAL</td><td style="text-align:right">${total.toLocaleString()} FCFA</td></tr>`;
+  const profBanner=profMode?`<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:.8rem;color:#92400e;font-weight:600">👨‍🏫 Version professeur — Identités anonymisées · Montants individuels masqués</div>`:'';
   win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>
   <title>${title}</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"/>
@@ -1254,17 +1271,15 @@ function openPdfWindow(title, subtitle, rows, total){
       </div>
       <div class="meta">Généré le<strong>${dateStr}</strong></div>
     </div>
+    ${profBanner}
     <div class="summary">
       <div class="sbox"><div class="lbl">Paiements</div><div class="val val-blue">${rows.length}</div></div>
       <div class="sbox"><div class="lbl">Étudiants distincts</div><div class="val">${new Set(rows.map(r=>r.student)).size}</div></div>
       <div class="sbox"><div class="lbl">Montant total</div><div class="val val-green">${total.toLocaleString()} FCFA</div></div>
     </div>
     <table>
-      <thead><tr><th>#</th><th>Étudiant</th><th>Niveau</th><th>Matière</th><th>Enseignant</th><th>Type</th><th>Date</th><th style="text-align:right">Montant</th></tr></thead>
-      <tbody>
-        ${rows.map((p,i)=>`<tr><td style="color:#94a3b8">${i+1}</td><td><strong>${p.student}</strong><div style="font-size:.75rem;color:#94a3b8">${p.wa}</div></td><td>${p.level}</td><td>${p.matiere}</td><td>${p.enseignant}</td><td><span class="bdg ${p.type==='avance'?'ba':'bt'}">${p.type==='avance'?'Avance':'Total'}</span></td><td style="color:#94a3b8;font-size:.8rem">${p.date||'—'}</td><td style="text-align:right;font-weight:600">${p.montant.toLocaleString()} FCFA</td></tr>`).join('')}
-        <tr class="trow"><td colspan="7">TOTAL</td><td style="text-align:right">${total.toLocaleString()} FCFA</td></tr>
-      </tbody>
+      <thead><tr>${theadCols}</tr></thead>
+      <tbody>${tbodyRows}${totalRow}</tbody>
     </table>
     <div class="foot">Document généré automatiquement par GeniusBill · Système de gestion des frais de cours</div>
   </div>
@@ -1273,7 +1288,7 @@ function openPdfWindow(title, subtitle, rows, total){
   win.document.close();
 }
 
-async function downloadByLevel(){
+async function downloadByLevel(profMode){
   const niv=document.getElementById('dlNiv').value;
   let all=await getPays();
   if(niv)all=all.filter(p=>p.level===niv);
@@ -1281,11 +1296,12 @@ async function downloadByLevel(){
   all.sort((a,b)=>a.student.localeCompare(b.student));
   const total=all.reduce((s,p)=>s+p.montant,0);
   const title=niv?`Paiements — ${niv}`:'Paiements — Tous les niveaux';
-  openPdfWindow(title,`${all.length} paiement(s) · Trié par ordre alphabétique`,all,total);
-  toast(`⬇ PDF généré — Total : ${total.toLocaleString()} FCFA`);
+  const sub=profMode?`${all.length} paiement(s) · Version professeur anonyme`:`${all.length} paiement(s) · Trié par ordre alphabétique`;
+  openPdfWindow(title,sub,all,total,profMode);
+  toast(profMode?`👨‍🏫 PDF prof généré — Total : ${total.toLocaleString()} FCFA`:`⬇ PDF généré — Total : ${total.toLocaleString()} FCFA`);
 }
 
-async function downloadByMatiere(){
+async function downloadByMatiere(profMode){
   const mat=document.getElementById('dlMat').value;
   let all=await getPays();
   if(mat)all=all.filter(p=>p.matiere===mat);
@@ -1293,8 +1309,9 @@ async function downloadByMatiere(){
   all.sort((a,b)=>a.student.localeCompare(b.student));
   const total=all.reduce((s,p)=>s+p.montant,0);
   const title=mat?`Paiements — ${mat}`:'Paiements — Toutes les matières';
-  openPdfWindow(title,`${all.length} paiement(s) · Trié par ordre alphabétique`,all,total);
-  toast(`⬇ PDF généré — Total : ${total.toLocaleString()} FCFA`);
+  const sub=profMode?`${all.length} paiement(s) · Version professeur anonyme`:`${all.length} paiement(s) · Trié par ordre alphabétique`;
+  openPdfWindow(title,sub,all,total,profMode);
+  toast(profMode?`👨‍🏫 PDF prof généré — Total : ${total.toLocaleString()} FCFA`:`⬇ PDF généré — Total : ${total.toLocaleString()} FCFA`);
 }
 
 // ── TOAST ──
