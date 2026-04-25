@@ -190,6 +190,9 @@ tr:hover td{background:var(--primary-light)}
 .toast{position:fixed;bottom:1.4rem;right:1.4rem;background:var(--text);color:#fff;padding:.65rem 1.15rem;border-radius:var(--rs);font-size:.87rem;z-index:9999;pointer-events:none;transform:translateY(70px);opacity:0;transition:all .24s;box-shadow:var(--shadow-md)}
 .toast.show{transform:translateY(0);opacity:1}
 
+.b-pending{background:#f1f5f9;color:#64748b}
+.b-confirmed{background:#f0fdf4;color:#16a34a}
+.b-disputed{background:#fff1f2;color:#dc2626}
 .empty{text-align:center;padding:3rem;color:var(--text3);font-size:.88rem}
 .dz{border-color:var(--red)!important}
 .dz h2{color:var(--red)}
@@ -205,6 +208,7 @@ tr:hover td{background:var(--primary-light)}
       <button id="langFr" type="button" onclick="setLang('fr')">FR</button>
       <button id="langEn" type="button" onclick="setLang('en')">EN</button>
     </div>
+    <button class="btn-nav" onclick="goProfLogin()">👨‍🏫 Profs</button>
     <button class="btn-nav" id="navAdminBtn" onclick="goAdmin()">⚙ Admin</button>
   </div>
 </nav>
@@ -349,6 +353,47 @@ tr:hover td{background:var(--primary-light)}
   </div>
 </div>
 
+<!-- ══ PROF LOGIN ══ -->
+<div class="screen" id="s-prof-login">
+  <div class="wrap">
+    <div class="pass-box">
+      <div style="font-size:2.8rem;margin-bottom:.9rem">👨‍🏫</div>
+      <h2>Espace Professeur</h2>
+      <p class="sub">Sélectionne ton nom et entre ton code PIN.</p>
+      <select id="profSelect" style="margin:.75rem 0;text-align:center"></select>
+      <input id="profPin" type="password" placeholder="Code PIN" maxlength="10"
+             onkeydown="if(event.key==='Enter')checkProfPin()"/>
+      <button class="btn" onclick="checkProfPin()">Accéder →</button>
+      <br><br>
+      <button class="btn-outline" onclick="show('s-home')">← Retour</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PROF DASHBOARD ══ -->
+<div class="screen" id="s-prof">
+  <div class="wrap-lg">
+    <br>
+    <h1 id="profDashTitle">Mon espace 👨‍🏫</h1>
+    <p class="sub">Paiements déclarés par les étudiants à ton nom. Confirme ou conteste chaque ligne.</p>
+    <div class="stats-row" id="profStatsRow"></div>
+    <div class="tbl-box">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Étudiant</th><th>Niveau</th><th>Matière</th>
+            <th>Montant</th><th>Type</th><th>Date</th><th>Statut</th><th></th>
+          </tr></thead>
+          <tbody id="profTBody"></tbody>
+        </table>
+      </div>
+      <div id="profEmpty" class="empty" style="display:none">Aucun paiement déclaré à votre nom pour l'instant.</div>
+    </div>
+    <br>
+    <button class="btn-outline" onclick="logoutProf()">← Déconnexion</button>
+  </div>
+</div>
+
 <!-- ══ ADMIN LOGIN ══ -->
 <div class="screen" id="s-login">
   <div class="wrap">
@@ -436,7 +481,7 @@ tr:hover td{background:var(--primary-light)}
             <thead><tr>
               <th>Étudiant</th><th>WhatsApp</th><th>Niveau</th>
               <th>Matière</th><th>Enseignant</th><th>Montant</th>
-              <th>Type</th><th>Date</th><th>Reçu</th><th></th>
+              <th>Type</th><th>Date</th><th>Statut</th><th>Reçu</th><th></th>
             </tr></thead>
             <tbody id="tBody"></tbody>
           </table>
@@ -490,6 +535,16 @@ tr:hover td{background:var(--primary-light)}
       <div class="card">
         <h2>🔐 Admin</h2>
         <p class="sub">Le dashboard utilise Supabase Auth. Crée un seul compte admin dans Supabase.</p>
+      <div class="card" style="margin-bottom:1rem">
+        <h2>👨‍🏫 Professeurs & PIN</h2>
+        <p class="sub" style="margin-bottom:.8rem">Chaque prof reçoit un code PIN pour accéder à son espace.</p>
+        <div id="cfgProfList"></div>
+        <div class="add-row">
+          <input id="cfgProfName" placeholder="Nom du professeur…" style="flex:2"/>
+          <input id="cfgProfPin" placeholder="PIN…" type="text" maxlength="10" style="flex:1"/>
+          <button class="btn btn-sm" onclick="addProf()">+ Ajouter</button>
+        </div>
+      </div>
         <button class="btn-outline" style="margin-right:.6rem" onclick="cleanDuplicates()">Nettoyer les doublons</button>
         <button class="btn" style="max-width:220px" onclick="logoutAdmin()">Se déconnecter</button>
       </div>
@@ -533,6 +588,7 @@ tr:hover td{background:var(--primary-light)}
 <script>
 // ── DEFAULT CONFIG ──
 const DEFAULTS = {
+  professors: [],
   matieres: {
     "1": ["Haskell","C++","Système d'exploitation","Réseau"],
     "2": ["Génie logiciel","Système d'information","Programmation web","Théorie des marchés","Électronique numérique 2"],
@@ -750,6 +806,7 @@ function refreshLoginHelp(){
 
 // ── STATE ──
 let S={name:'',wa:'',level:null,nb:0,idx:0,session:[],editIndex:null};
+let currentProf=null;
 
 // ── NAV ──
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0)}
@@ -807,15 +864,19 @@ async function renderStudentSpace(){
   const total=own.reduce((sum,p)=>sum+p.montant,0);
   box.innerHTML=`
     <div class="rcpt-wrap">
-      ${own.map(p=>`
-        <div class="rcpt-row">
+      ${own.map(p=>{
+        const sb=p.status==='confirmed'?'<span class="badge b-confirmed">✅ Confirmé</span>'
+          :p.status==='disputed'?'<span class="badge b-disputed">❌ Contesté</span>'
+          :'<span class="badge b-pending">⏳ En attente</span>';
+        return`<div class="rcpt-row" style="flex-wrap:wrap;gap:.4rem">
           <span class="rcpt-lbl">${p.matiere} · ${p.enseignant}</span>
-          <span style="display:flex;align-items:center;gap:.5rem">
+          <span style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+            ${sb}
             <strong>${p.montant.toLocaleString()} FCFA</strong>
             <button class="btn-outline btn-sm" onclick="openEditPayModal('${p.id}')">✏</button>
           </span>
-        </div>
-      `).join('')}
+        </div>`;
+      }).join('')}
       <div class="rcpt-row"><span>TOTAL</span><span>${total.toLocaleString()} FCFA</span></div>
     </div>
   `;
@@ -826,13 +887,22 @@ function toggleProfileEdit(){
 }
 
 async function saveProfileEdit(){
+  const oldProfile=getStudentProfile();
   const name=normalizeStudentName(document.getElementById('editProfName').value);
   const waRaw=document.getElementById('editProfWA').value.trim();
   const canon=canonicalPhone(waRaw);
   const level=document.getElementById('editProfLevel').value;
   if(!name){toast('⚠ Entre ton nom complet');return}
   if(!canon){toast('⚠ Entre un numéro WhatsApp valide');return}
-  saveStudentProfile({name,wa:formatPhone(waRaw),level});
+  const wa=formatPhone(waRaw);
+  if(sbClient&&oldProfile){
+    const nameChanged=normTxt(oldProfile.name)!==normTxt(name);
+    const waChanged=(canonicalPhone(oldProfile.wa)||normTxt(oldProfile.wa))!==(canon||normTxt(wa));
+    if(nameChanged||waChanged){
+      await sbClient.from('payments').update({student:name,wa,level}).eq('student',oldProfile.name).eq('wa',oldProfile.wa);
+    }
+  }
+  saveStudentProfile({name,wa,level});
   toast('Profil mis à jour ✓');
   await renderStudentSpace();
 }
@@ -1067,7 +1137,7 @@ async function switchTab(name,el){
   ['overview','students','grouped','config'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===name?'block':'none'});
   if(name==='students')await renderTable();
   if(name==='grouped')await renderGroupedStudents();
-  if(name==='config'){renderCfgMat();renderCfgEns()}
+  if(name==='config'){renderCfgMat();renderCfgEns();renderCfgProf()}
   if(name==='overview')await renderAdmin();
 }
 
@@ -1084,11 +1154,18 @@ function renderStats(all){
   const total=all.reduce((s,p)=>s+p.montant,0);
   const students=[...new Set(all.map(p=>p.student))].length;
   const avances=all.filter(p=>p.type==='avance').length;
+  const confirmed=all.filter(p=>p.status==='confirmed').length;
+  const disputed=all.filter(p=>p.status==='disputed').length;
+  const pending=all.filter(p=>!p.status||p.status==='pending').length;
   document.getElementById('statsRow').innerHTML=`
     <div class="stat-card sp"><div class="stat-val">${total.toLocaleString()}</div><div class="stat-lbl">FCFA perçus au total</div></div>
     <div class="stat-card"><div class="stat-val">${all.length}</div><div class="stat-lbl">Paiements enregistrés</div></div>
     <div class="stat-card sg"><div class="stat-val">${students}</div><div class="stat-lbl">Étudiants distincts</div></div>
-    <div class="stat-card sa"><div class="stat-val">${avances}</div><div class="stat-lbl">Avances en cours</div></div>`
+    <div class="stat-card sa"><div class="stat-val">${avances}</div><div class="stat-lbl">Avances en cours</div></div>
+    <div class="stat-card sg"><div class="stat-val">${confirmed}</div><div class="stat-lbl">✅ Confirmés profs</div></div>
+    <div class="stat-card sa"><div class="stat-val">${pending}</div><div class="stat-lbl">⏳ En attente profs</div></div>
+    ${disputed?`<div class="stat-card"><div class="stat-val" style="color:var(--red)">${disputed}</div><div class="stat-lbl">❌ Contestés</div></div>`:''}
+  `
 }
 
 let cMat,cEns;
@@ -1113,7 +1190,13 @@ async function renderTable(){
   const empty=document.getElementById('tEmpty');
   if(!all.length){body.innerHTML='';empty.style.display='block';return}
   empty.style.display='none';
-  body.innerHTML=all.map(p=>{const lv=p.level.replace('Niveau ','');return`<tr><td><div class="td-name">${p.student}</div></td><td><div class="td-wa">${p.wa}</div></td><td><span class="badge b-l${lv}">${p.level}</span></td><td>${p.matiere}</td><td>${p.enseignant}</td><td><strong>${p.montant.toLocaleString()} FCFA</strong></td><td><span class="badge ${p.type==='avance'?'b-avance':'b-total'}">${p.type}</span></td><td style="color:var(--text3);font-size:.8rem">${p.date||'—'}</td><td><button class="btn-pdf" onclick="printRcpt('${p.id}')">🖨 Reçu PDF</button></td><td><button class="btn-ghost" onclick="delRow('${p.id}')">✕</button></td></tr>`}).join('')
+  body.innerHTML=all.map(p=>{
+    const lv=p.level.replace('Niveau ','');
+    const sb=p.status==='confirmed'?'<span class="badge b-confirmed">✅ Confirmé</span>'
+      :p.status==='disputed'?'<span class="badge b-disputed">❌ Contesté</span>'
+      :'<span class="badge b-pending">⏳ En attente</span>';
+    return`<tr><td><div class="td-name">${p.student}</div></td><td><div class="td-wa">${p.wa}</div></td><td><span class="badge b-l${lv}">${p.level}</span></td><td>${p.matiere}</td><td>${p.enseignant}</td><td><strong>${p.montant.toLocaleString()} FCFA</strong></td><td><span class="badge ${p.type==='avance'?'b-avance':'b-total'}">${p.type}</span></td><td style="color:var(--text3);font-size:.8rem">${p.date||'—'}</td><td>${sb}</td><td><button class="btn-pdf" onclick="printRcpt('${p.id}')">🖨 Reçu PDF</button></td><td><button class="btn-ghost" onclick="delRow('${p.id}')">✕</button></td></tr>`;
+  }).join('')
 }
 
 async function renderGroupedStudents(){
@@ -1271,6 +1354,117 @@ async function printRcpt(id){
   </div>
   <script>window.onload=function(){window.print()}<\/script>
   </body></html>`);win.document.close()
+}
+
+// ── PROF SPACE ──
+function goProfLogin(){
+  const cfg=getCfg();
+  const profs=cfg.professors||[];
+  if(!profs.length){toast('⚠ Aucun professeur configuré. Demande à l\'admin.');return}
+  const sel=document.getElementById('profSelect');
+  sel.innerHTML=profs.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+  document.getElementById('profPin').value='';
+  show('s-prof-login');
+}
+
+function checkProfPin(){
+  const cfg=getCfg();
+  const profs=cfg.professors||[];
+  const name=document.getElementById('profSelect').value;
+  const pin=document.getElementById('profPin').value.trim();
+  const prof=profs.find(p=>p.name===name&&p.pin===pin);
+  if(!prof){toast('❌ Code PIN incorrect');return}
+  currentProf=name;
+  show('s-prof');
+  renderProfDashboard();
+}
+
+async function renderProfDashboard(){
+  if(!currentProf)return;
+  document.getElementById('profDashTitle').textContent=`👨‍🏫 ${currentProf}`;
+  const all=await getPays();
+  const mine=all.filter(p=>normTxt(p.enseignant)===normTxt(currentProf));
+  mine.sort((a,b)=>a.student.localeCompare(b.student));
+  const total=mine.reduce((s,p)=>s+p.montant,0);
+  const confirmed=mine.filter(p=>p.status==='confirmed');
+  const disputed=mine.filter(p=>p.status==='disputed');
+  const pending=mine.filter(p=>!p.status||p.status==='pending');
+  document.getElementById('profStatsRow').innerHTML=`
+    <div class="stat-card sp"><div class="stat-val">${total.toLocaleString()}</div><div class="stat-lbl">FCFA déclarés</div></div>
+    <div class="stat-card"><div class="stat-val">${mine.length}</div><div class="stat-lbl">Paiements déclarés</div></div>
+    <div class="stat-card sg"><div class="stat-val">${confirmed.length}</div><div class="stat-lbl">✅ Confirmés</div></div>
+    <div class="stat-card sa"><div class="stat-val">${pending.length}</div><div class="stat-lbl">⏳ En attente</div></div>
+    ${disputed.length?`<div class="stat-card"><div class="stat-val" style="color:var(--red)">${disputed.length}</div><div class="stat-lbl">❌ Contestés</div></div>`:''}
+  `;
+  const body=document.getElementById('profTBody');
+  const empty=document.getElementById('profEmpty');
+  if(!mine.length){body.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  body.innerHTML=mine.map(p=>{
+    const sb=p.status==='confirmed'?'<span class="badge b-confirmed">✅ Confirmé</span>'
+      :p.status==='disputed'?'<span class="badge b-disputed">❌ Contesté</span>'
+      :'<span class="badge b-pending">⏳ En attente</span>';
+    const btnConfirm=p.status!=='confirmed'?`<button class="btn-pdf" style="background:var(--green)" onclick="confirmPay('${p.id}')">✅ Confirmer</button>`:'';
+    const btnDispute=p.status!=='disputed'?`<button class="btn-pdf" style="background:var(--red);margin-left:.3rem" onclick="disputePay('${p.id}')">❌ Contester</button>`:'';
+    return`<tr>
+      <td><div class="td-name">${p.student}</div><div class="td-wa">${p.wa}</div></td>
+      <td>${p.level}</td><td>${p.matiere}</td>
+      <td><strong>${p.montant.toLocaleString()} FCFA</strong></td>
+      <td><span class="badge ${p.type==='avance'?'b-avance':'b-total'}">${p.type}</span></td>
+      <td style="color:var(--text3);font-size:.8rem">${p.date||'—'}</td>
+      <td>${sb}</td>
+      <td style="white-space:nowrap">${btnConfirm}${btnDispute}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function updatePayStatus(id,status){
+  if(!requireSupabase())return false;
+  const {error}=await sbClient.from('payments').update({status}).eq('id',id);
+  if(error){console.error(error);toast('❌ Mise à jour impossible');return false}
+  return true;
+}
+
+async function confirmPay(id){
+  if(await updatePayStatus(id,'confirmed')){toast('✅ Paiement confirmé');await renderProfDashboard()}
+}
+
+async function disputePay(id){
+  if(await updatePayStatus(id,'disputed')){toast('❌ Paiement contesté');await renderProfDashboard()}
+}
+
+function logoutProf(){currentProf=null;show('s-home');toast('Session prof fermée')}
+
+// ── CFG PROFESSEURS ──
+function renderCfgProf(){
+  const cfg=getCfg();
+  const profs=cfg.professors||[];
+  document.getElementById('cfgProfList').innerHTML=profs.length
+    ?profs.map((p,i)=>`<div class="item-row"><span>${p.name}</span><span style="display:flex;align-items:center;gap:.6rem"><span style="font-size:.78rem;color:var(--text3);font-weight:600">PIN : ${p.pin}</span><button class="btn-ghost" onclick="rmProf(${i})">✕</button></span></div>`).join('')
+    :'<p style="color:var(--text3);font-size:.84rem;padding:.4rem 0">Aucun professeur configuré.</p>';
+}
+
+function addProf(){
+  const name=document.getElementById('cfgProfName').value.trim();
+  const pin=document.getElementById('cfgProfPin').value.trim();
+  if(!name||!pin){toast('⚠ Entre le nom et le PIN');return}
+  const cfg=getCfg();
+  if(!cfg.professors)cfg.professors=[];
+  if(cfg.professors.some(p=>p.name===name)){toast('⚠ Ce professeur existe déjà');return}
+  cfg.professors.push({name,pin});
+  saveCfg(cfg);
+  document.getElementById('cfgProfName').value='';
+  document.getElementById('cfgProfPin').value='';
+  renderCfgProf();
+  toast('Professeur ajouté ✓');
+}
+
+function rmProf(i){
+  const cfg=getCfg();
+  if(!cfg.professors)return;
+  cfg.professors.splice(i,1);
+  saveCfg(cfg);
+  renderCfgProf();
 }
 
 // ── CFG MATIERES ──
